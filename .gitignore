@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+
+# Test exports
+*.nessus
+*.md
+*.txt
+
+# Exclusions
+!README.md

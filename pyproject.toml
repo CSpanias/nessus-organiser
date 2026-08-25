@@ -1,0 +1,24 @@
+[project]
+name = "nessus-organiser"
+version = "0.1.0"
+description = "Nessus Parser"
+readme = "README.md"
+requires-python = ">=3.10"
+
+authors = [
+    { name = "Charalampos Spanias" }
+]
+
+dependencies = [
+    "rich>=13.0.0",
+    "PyYAML>=6.0",
+]
+
+keywords = [
+    "nessus",
+    "vulnerability",
+    "scan",
+]
+
+[project.scripts]
+nessus-organiser = "nessus_organiser.cli.main:main"

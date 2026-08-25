@@ -1,0 +1,487 @@
+title: Insecure SSL/TLS Configuration
+
+introduction: |
+  The assessment identified a number of weaknesses affecting the transport
+  layer security (TLS) configuration of exposed services.
+
+  These weaknesses may reduce the confidentiality, integrity,
+  and trust assurances normally provided by TLS, increasing the risk of
+  protocol downgrade attacks, cryptographic compromise, service
+  impersonation, or other security weaknesses under certain conditions.
+
+  The following findings provide further information regarding the
+  identified issues and recommended remediation measures.
+
+deprecated_ssl_support:
+
+  id: TLS-001
+
+  title: Deprecated SSL Version Support
+
+  severity:
+
+    internal : Informational
+    external : Low
+
+  commentary: |
+    The service supported one or more legacy SSL protocols which contain
+    well-established cryptographic weaknesses and are no longer considered
+    secure. These protocols lack many of the security protections present in 
+    modern versions of TLS and have been superseded by more robust encryption 
+    standards.
+            
+    The continued availability of deprecated SSL protocols exposes the service
+    to a number of well-established cryptographic weaknesses and protocol-level
+    attacks. These protocols no longer meet modern security standards and
+    provide fewer protections than contemporary TLS implementations.
+
+    Although modern clients typically negotiate newer TLS versions where 
+    available, support for legacy protocols increases the risk of protocol 
+    downgrade attacks. An attacker in an adversary-in-the-middle (AiTM) 
+    position may be able to influence protocol negotiation and force the use of 
+    weaker encryption mechanisms, reducing the overall effectiveness of 
+    transport layer security controls.
+
+    Successful exploitation generally requires the ability to intercept and 
+    manipulate network traffic, and in some cases the presence of additional 
+    environmental conditions. Nevertheless, retaining support for legacy SSL 
+    protocols unnecessarily expands the attack surface, weakens the overall 
+    cryptographic posture of the service, and maintains exposure to protocol 
+    versions that are no longer required in modern environments.
+
+  solution: |
+    Disable support for deprecated SSL protocols on all affected services and 
+    restrict communications to modern TLS protocol versions, preferably TLS 1.2 
+    or TLS 1.3. In addition:
+      
+      - Review all externally and internally exposed services for legacy 
+        protocol support.
+      - Ensure that only secure TLS versions are permitted during protocol 
+        negotiation.
+      - Replace any legacy clients or applications that require SSL 2.0 or SSL 
+        3.0.
+      - Review certificate and key reuse across services to eliminate potential 
+        cross-protocol attack scenarios.
+      - Verify that strong cipher suites and modern key exchange mechanisms are 
+        used following protocol upgrades.
+
+  references:
+    - https://learn.microsoft.com/en-us/dotnet/core/extensions/sslstream-best-practices
+    - https://www.gov.uk/government/publications/email-security-standards/transport-layer-security-tls
+
+deprecated_tls_support:
+
+  id: TLS-002
+
+  title: Deprecated TLS Protocol Support
+
+  severity:
+
+    internal : Informational
+    external : Low
+
+  commentary: |
+    The service supported one or more deprecated TLS protocol versions that are
+    no longer aligned with modern cryptographic standards. These protocol
+    versions contain known weaknesses and lack a number of security enhancements
+    introduced in later releases, such as improved cipher suite support and
+    stronger protections against cryptographic attacks.
+
+    Although modern clients will typically negotiate newer TLS versions where
+    available, the continued support for deprecated TLS protocol versions
+    introduces the risk of protocol downgrade attacks. An attacker in a
+    privileged network position may be able to force connections to use weaker
+    encryption standards, reducing the overall effectiveness of transport layer
+    security protections.
+
+    Continued support for legacy TLS protocol versions unnecessarily expands the
+    attack surface and weakens the overall security posture of the service.
+
+  solution: |
+    Remove support for deprecated TLS protocol versions and restrict
+    communication to modern TLS versions, preferably TLS 1.2 or higher with
+    secure cipher suites. Where supported, ensure insecure TLS renegotiation is
+    disabled and that affected services are updated to versions implementing
+    secure renegotiation mechanisms.
+
+  references:
+    - https://learn.microsoft.com/en-us/dotnet/core/extensions/sslstream-best-practices
+    - https://www.gov.uk/government/publications/email-security-standards/transport-layer-security-tls
+    - https://oneuptime.com/blog/post/2026-03-20-disable-weak-tls-cipher-suites/view#step-4-ciphers-to-explicitly-disable
+    - https://nginx.org/en/docs/http/ngx_http_ssl_module.html
+    - https://httpd.apache.org/docs/2.4/mod/mod_ssl.html
+    - https://techcommunity.microsoft.com/blog/iis-support-blog/how-to-disable-ssl-2-0-or-ssl-3-0-from-iis-server/287812
+    - https://www.nartac.com/Products/IISCrypto
+
+weak_cipher_suites:
+
+  id: TLS-003
+
+  title: Weak and Deprecated Cipher Suites Supported
+
+  severity: 
+
+    internal : Informational
+    external : Low
+
+  commentary: |
+    The service supported one or more weak or deprecated SSL/TLS cipher suites
+    that no longer meet modern cryptographic standards. These cipher suites rely
+    on outdated algorithms or cryptographic constructions that provide reduced
+    protection compared to contemporary alternatives, weakening the overall
+    confidentiality and integrity of encrypted communications.
+
+    Weak cipher suites are typically associated with well-established
+    cryptographic weaknesses and may increase the risk of information disclosure
+    or cryptographic downgrade attacks under certain conditions. The practical
+    impact depends on the specific cipher suites enabled and the manner in which
+    they are used by affected services.
+
+    Although modern clients generally prioritise stronger cipher suites during
+    TLS negotiation, the continued availability of weaker alternatives
+    introduces the potential for downgrade or negotiation-based attacks. An
+    attacker in an adversary-in-the-middle (AiTM) position may be able to
+    influence the handshake process and force the use of weaker cryptographic
+    options under certain conditions.
+
+    Successful exploitation typically requires additional preconditions,
+    including the ability to intercept network traffic and influence protocol
+    negotiation. Nevertheless, the presence of weak cipher suites unnecessarily
+    expands the attack surface and reduces the overall strength of the service's
+    cryptographic configuration.
+
+  solution: |
+    Disable support for weak and deprecated cipher suites and restrict the
+    service to modern cryptographic algorithms. More specifically:
+
+    - Remove support for weak, deprecated, or unnecessary cipher suites.
+    - Prefer modern cipher suites supporting authenticated encryption, such as
+      AES-GCM or ChaCha20-Poly1305.
+    - Prefer cipher suites that provide forward secrecy through ECDHE key
+      exchange.
+    - Periodically review TLS configurations to ensure deprecated algorithms
+      are removed as standards evolve.
+
+  references:
+    - https://support.microsoft.com/en-gb/topic/microsoft-security-advisory-update-for-disabling-rc4-479fd6f0-c7b5-0671-975b-c45c3f2c0540#ID0EFR
+    - https://oneuptime.com/blog/post/2026-03-20-disable-weak-tls-cipher-suites/view#step-4-ciphers-to-explicitly-disable
+    - https://nginx.org/en/docs/http/ngx_http_ssl_module.html
+    - https://httpd.apache.org/docs/2.4/mod/mod_ssl.html
+    - https://techcommunity.microsoft.com/blog/iis-support-blog/how-to-disable-ssl-2-0-or-ssl-3-0-from-iis-server/287812
+    - https://www.nartac.com/Products/IISCrypto
+    - https://freakattack.com/
+
+weak_dh_parameters:
+
+  id: TLS-004
+
+  title: Weak Diffie-Hellman Parameters Supported (Logjam)
+
+  severity: 
+
+    internal : Informational
+    external : Low
+
+  commentary: |
+    The service supported weak Diffie-Hellman (DH) key exchange parameters
+    with a modulus size of 1024 bits or less. Such parameters no longer meet
+    modern cryptographic standards and are associated with attacks such as
+    Logjam, which exploit weaknesses in commonly used or precomputed DH groups.
+
+    Although modern clients typically negotiate the strongest available
+    cryptographic settings, the use of weak DH parameters reduces the overall
+    strength of the key exchange process and may weaken the confidentiality of
+    encrypted communications. An attacker in an adversary-in-the-middle (AiTM)
+    position may be able to influence negotiation and leverage these weaker
+    parameters under specific conditions.
+
+    Successful exploitation generally requires network positioning, favourable
+    cryptographic conditions, and significant computational resources.
+    Nevertheless, the continued use of weak DH parameters unnecessarily expands
+    the attack surface and weakens the overall cryptographic posture of the
+    affected service.
+
+  solution: |
+    Replace weak Diffie-Hellman (DH) parameters with modern key exchange
+    mechanisms and cryptographic standards. In particular:
+
+    - Configure affected services to use DH parameters with a modulus size of
+      at least 2048 bits.
+    - Where possible, migrate to Elliptic Curve Diffie-Hellman Ephemeral
+      (ECDHE) key exchange mechanisms.
+    - Remove legacy or commonly shared DH groups.
+    - Generate custom DH parameters where traditional DH key exchange remains
+      required.
+    - Periodically review TLS configurations to ensure deprecated key exchange
+      mechanisms are removed and only approved cryptographic standards are
+      supported.
+
+  references:
+    - https://docs.microsoft.com/en-us/security-updates/securitybulletins/2015/ms15-055
+    - https://weakdh.org/sysadmin.html
+
+weak_certificate_cryptography:
+
+  id: TLS-005
+
+  title: Weak Certificate Cryptography
+
+  severity:
+
+    internal : Informational
+    external : Low
+
+  commentary: |
+    The TLS certificate chain presented by the service utilised cryptographic
+    mechanisms that no longer align with current industry standards.
+    Specifically, the certificate was signed using a deprecated hashing
+    algorithm and/or contained RSA keys below the recommended minimum key
+    length of 2048 bits.
+
+    Weak certificate signature algorithms, such as SHA-1, are no longer
+    considered sufficiently resistant to modern cryptographic attacks.
+    Although practical exploitation is difficult, known weaknesses reduce
+    confidence in the integrity of the certificate and weaken the trust
+    assurances provided by TLS.
+
+    Similarly, RSA keys shorter than 2048 bits provide a reduced security
+    margin against advances in computational capabilities. While such keys are
+    not considered practically breakable in most environments, their continued
+    use reflects an outdated cryptographic configuration and does not meet
+    current security best practices.
+
+    Modern browsers, operating systems, and security standards increasingly
+    reject or discourage the use of weak certificate algorithms and key
+    lengths. As a result, continued reliance on deprecated cryptographic
+    mechanisms may lead to interoperability issues, reduced trust in affected
+    services, and a weakened overall cryptographic posture.
+
+  solution: |
+    Replace affected certificates with certificates that utilise modern
+    cryptographic standards. Specifically:
+
+    - Replace certificates signed using deprecated hashing algorithms
+      (e.g. SHA-1 or MD5) with certificates signed using SHA-256 or
+      stronger algorithms.
+    - Replace any certificate chain components that use RSA keys shorter
+      than 2048 bits.
+    - Ensure certificate issuance and renewal processes enforce minimum
+      cryptographic standards and approved algorithms.
+    - Periodically review certificate inventories to identify deprecated
+      algorithms or key lengths before they become unsupported by clients
+      and browsers.
+
+  references:
+    - https://www.zenarmor.com/docs/network-security-tutorials/best-practices-for-ssl-tls-implementation#discovering-phase-for-ssltls-certificate
+    - https://owasp.org/www-project-web-security-testing-guide/v41/4-Web_Application_Security_Testing/09-Testing_for_Weak_Cryptography/01-Testing_for_Weak_SSL_TLS_Ciphers_Insufficient_Transport_Layer_Protection#:~:text=Testing%20for%20Weak%20SSL/TLS
+
+anonymous_cipher_suites:
+
+  id: TLS-006
+
+  title: Anonymous Cipher Suites Supported
+
+  severity:
+
+    internal : Informational
+    external : Low
+
+  commentary: |
+    The service supported anonymous SSL/TLS cipher suites (aNULL). These
+    cipher suites provide encryption but do not perform server authentication,
+    preventing clients from verifying the identity of the remote service.
+
+    As a result, an attacker positioned between a client and server may be able
+    to conduct an adversary-in-the-middle (AiTM) attack by impersonating the
+    service without possessing a valid TLS certificate. Although communications
+    may remain encrypted, the absence of authentication undermines one of the
+    primary security objectives of TLS: assurance of server identity.
+
+    Modern clients typically disable anonymous cipher suites by default;
+    however, their continued availability unnecessarily expands the attack
+    surface and weakens the overall security posture of the service.
+
+  solution: |
+    Disable all anonymous cipher suites and ensure the service only supports
+    authenticated cipher suites that utilise valid TLS certificates.
+    Specifically:
+
+    - Remove support for all `aNULL` cipher suites.
+    - Configure services to use modern TLS cipher suites supporting
+      certificate-based authentication.
+    - Restrict protocol support to TLS 1.2 and TLS 1.3 where possible.
+    - Periodically review TLS configurations to ensure deprecated cipher
+      suites are removed.
+
+  references:
+    - https://www.zenarmor.com/docs/network-security-tutorials/best-practices-for-ssl-tls-implementation#discovering-phase-for-ssltls-certificate
+    - https://wiki.openssl.org/index.php/SSL_and_TLS_Protocols#:~:text=aNULL
+
+invalid_certificate_configuration:
+
+  id: TLS-007
+
+  title: Invalid TLS Certificate Configuration
+
+  severity:
+
+    internal: Informational
+    external: Low
+
+  commentary: null
+
+  solution: |
+    Replace the affected certificate with a valid TLS certificate that:
+
+    - Is issued by a trusted Certificate Authority (CA) or approved internal
+      PKI.
+    - Is within its validity period and renewed before expiration.
+    - Includes correct hostname information within the Subject Alternative Name
+      (SAN) extension.
+    - Presents a complete and valid certificate chain, including all required
+      intermediate certificates.
+    - Uses modern cryptographic algorithms and key lengths.
+
+    Additionally, implement certificate lifecycle management processes to
+    ensure certificates are regularly reviewed, monitored, and renewed before
+    expiry.
+
+tls_insecure_renegotiation:
+
+  id: TLS-008
+
+  title: Insecure TLS Renegotiation Supported
+
+  severity:
+
+    internal: Informational
+    external: Low
+
+  commentary: |
+    Testing also identified support for insecure TLS renegotiation behaviour 
+    associated with CVE-2009-3555. Whilst successful exploitation generally 
+    requires an adversary-in-the-middle (AiTM) position, insecure renegotiation 
+    can weaken the security guarantees provided by TLS and represents an 
+    outdated protocol implementation."
+
+  solution: |
+    Update affected services and TLS implementations to versions supporting
+    secure renegotiation and disable insecure renegotiation where possible.
+
+  references:
+    - https://nvd.nist.gov/vuln/detail/CVE-2009-3555
+
+certificate_issues:
+
+  "57582":
+
+    title: Self-Signed Certificate
+
+    commentary: |
+      The service presented a self-signed TLS certificate that was not issued
+      by a trusted Certificate Authority (CA). As a result, clients could not
+      establish a trusted chain of trust when connecting to the service and may
+      receive warnings indicating that the certificate issuer is not trusted.
+
+      In external environments, this weakens the trust model of TLS by removing
+      independent verification of the server's identity. In internal
+      environments, users and systems may become accustomed to bypassing
+      certificate warnings, reducing the effectiveness of certificate
+      validation as a security control.
+
+      An attacker in an adversary-in-the-middle (AiTM) position could
+      potentially abuse this condition by presenting a similarly untrusted
+      certificate, increasing the risk of service impersonation.
+
+  "15901":
+
+    title: Certificate Expiry
+
+    commentary: |
+      The TLS certificate presented by the service had expired and was no
+      longer within its validity period. While encrypted communications may
+      still be established, clients can no longer verify the authenticity of
+      the service using the certificate, reducing the trust assurances normally
+      provided by TLS.
+
+      Expired certificates commonly result in browser or application warnings
+      that users may ignore in order to access the service. Over time, this can
+      encourage poor security practices and reduce confidence in certificate
+      validation controls.
+
+      Additionally, the use of expired certificates may indicate weaknesses in
+      certificate lifecycle management and renewal processes.
+
+  "45410":
+
+    title: Certificate Hostname Mismatch
+
+    commentary: |
+      The TLS certificate presented by the service contained a Common Name
+      (CN) and/or Subject Alternative Name (SAN) that did not match the
+      hostname used to access the service. Consequently, clients were unable
+      to verify that the certificate belonged to the intended endpoint.
+
+      Although communications may remain encrypted, the inability to properly
+      validate server identity weakens the trust model of TLS. Users
+      encountering certificate warnings may be unable to distinguish between
+      a benign configuration issue and a potential adversary-in-the-middle
+      (AiTM) attack, increasing the likelihood that warnings are ignored and
+      malicious endpoints are trusted.
+
+  "45411":
+
+    title: Certificate Hostname Mismatch
+
+    commentary: |
+      The TLS certificate presented by the service contained a Common Name
+      (CN) and/or Subject Alternative Name (SAN) that did not match the
+      hostname used to access the service. Consequently, clients were unable
+      to verify that the certificate belonged to the intended endpoint.
+
+      Although communications may remain encrypted, the inability to properly
+      validate server identity weakens the trust model of TLS. Users
+      encountering certificate warnings may be unable to distinguish between
+      a benign configuration issue and a potential adversary-in-the-middle
+      (AiTM) attack, increasing the likelihood that warnings are ignored and
+      malicious endpoints are trusted.
+
+  "51192":
+
+    title: Invalid or Untrusted Certificate Chain
+
+    commentary: |
+      The TLS certificate could not be fully validated because the
+      certificate chain was incomplete, incorrectly configured, or issued by
+      an untrusted authority. As a result, clients were unable to establish
+      trust in the authenticity of the service despite successful encryption
+      of communications.
+
+      Where certificate trust cannot be established, users and applications
+      may be forced to bypass validation warnings to access the service. This
+      weakens the protection provided by TLS and increases the risk of service
+      impersonation or adversary-in-the-middle attacks.
+
+  "56284":
+
+    title: Certificate Basic Constraints / Key Usage Misconfiguration
+
+    commentary: |
+      The TLS certificate presented by the service did not adhere to
+      recommended certificate profile requirements relating to certificate
+      constraints or key usage extensions. These extensions define how a
+      certificate may be used and help clients determine whether the
+      certificate is appropriate for a particular purpose, such as server
+      authentication or certificate signing.
+
+      Incorrect or missing constraints can lead to certificate validation
+      inconsistencies and may reduce confidence in the trustworthiness of the
+      certificate. While modern clients often enforce their own validation
+      behaviour, non-standard certificate profiles can introduce compatibility
+      issues and weaken the overall assurance provided by the public key
+      infrastructure (PKI).
+
+      Although exploitation is unlikely in isolation, the issue indicates weak
+      certificate management practices and may contribute to broader trust
+      validation problems when combined with other certificate-related
+      weaknesses.

@@ -1,0 +1,102 @@
+title: Patch Management Review
+
+introduction: |
+  The assessment identified weaknesses relating to missing vendor
+  security updates and unsupported software components across the
+  assessed environment. These issues increase the likelihood that
+  publicly known vulnerabilities may be exploited by attackers,
+  potentially resulting in unauthorised access, arbitrary code
+  execution, privilege escalation, system compromise, or disruption
+  of business operations.
+
+  Effective patch and lifecycle management are fundamental security
+  controls that help organisations reduce exposure to known threats.
+  Failure to apply security updates in a timely manner increases the
+  risk posed by publicly available vulnerabilities, while software
+  that has reached end of life may no longer receive security fixes,
+  leaving affected systems exposed to newly discovered weaknesses.
+
+  The following findings provide further details regarding identified
+  patching and software-lifecycle weaknesses, together with guidance
+  to assist remediation and risk reduction activities.
+
+unsupported_software:
+
+  id: SW-001
+
+  title: Unsupported Software
+
+  severity:
+
+    internal: High
+    external: Critical
+
+  commentary: |
+    The assessment identified software components that had reached
+    end-of-life (EOL), end-of-support (EOS), or were otherwise no longer
+    supported by the vendor. As a result, affected systems may no longer
+    receive security updates, bug fixes, or technical support.
+
+    Unsupported software presents an increased security risk because newly
+    discovered vulnerabilities may remain permanently unpatched. Over
+    time, this can result in the accumulation of exploitable weaknesses
+    and an increased likelihood of successful compromise.
+
+    Continued reliance on unsupported software may also introduce
+    operational risks, including compatibility issues, reduced vendor
+    support, and difficulties maintaining compliance with internal or
+    external security requirements.
+
+  solution: |
+    Upgrade, replace, or migrate affected software to vendor-supported
+    versions. Additionally:
+
+    - Maintain an inventory of software products and support lifecycles.
+    - Monitor vendor end-of-life and end-of-support announcements.
+    - Develop migration plans for software approaching end-of-life.
+    - Remove unsupported software that is no longer required.
+    - Ensure replacement software receives ongoing security updates and
+      vendor support.
+
+missing_security_patches:
+
+  id: SW-002
+
+  title: Missing Security Updates
+
+  severity:
+
+    internal: High
+    external: Critical
+
+  commentary: |
+    The assessment identified software components that were missing one or
+    more vendor-provided security updates. As a result, affected systems
+    remained vulnerable to known security issues for which corrective
+    updates were already available.
+
+    Security updates are released by vendors to address identified
+    vulnerabilities, improve software security, and reduce exposure to
+    newly discovered threats. Failure to apply these updates in a timely
+    manner increases the likelihood that known vulnerabilities may be
+    exploited using publicly available techniques, tools, or exploit code.
+
+    The overall risk associated with unpatched software depends on the
+    nature and severity of the underlying vulnerabilities, the exposure of
+    affected systems, and the availability of exploit techniques.
+    Nevertheless, missing security updates increase the attack surface of
+    the environment and weaken its overall security posture.
+
+  solution: |
+    Apply the vendor-recommended security updates to all affected systems
+    and software components. Additionally:
+
+    - Implement a formal patch management process covering operating
+      systems, applications, and third-party software.
+    - Prioritise updates addressing critical and high-severity
+      vulnerabilities.
+    - Ensure security updates are tested and deployed within defined
+      maintenance windows.
+    - Regularly review software inventories to identify systems missing
+      security updates.
+    - Monitor vendor security advisories for newly released updates.
