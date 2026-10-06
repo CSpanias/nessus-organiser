@@ -201,7 +201,7 @@ def generate_markdown(
 
         for reference in sorted(references):
 
-            output.append(f"- {reference}")
+            output.append(f"- [{reference}]({reference})")
 
     with open(output_path, "w", encoding="utf-8",) as fp:
         fp.write("\n".join(output))
