@@ -149,6 +149,26 @@ def build_patch_management_statistics(
         grouped_findings["missing_security_patches"]
     )
 
+    print("\n=== PATCH FINDINGS ===\n")
+
+    for finding in sorted(
+        patch_findings,
+        key=lambda x: (
+            x.plugin_id,
+            x.host,
+        ),
+    ):
+        print(
+            f"{finding.host:<15} "
+            f"{finding.plugin_id:<8} "
+            f"{finding.plugin_name}"
+        )
+
+    print(
+        f"\nTotal Patch Findings: "
+        f"{len(patch_findings)}"
+    )
+
     legacy_findings = _deduplicate_findings(
         grouped_findings["unsupported_software"]
     )
