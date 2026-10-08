@@ -50,10 +50,16 @@ PATCHING_EXCLUDED_PLUGIN_IDS = {
     "136946",  # CVE-2017-8529 protection registry key
     "87252",   # MS KB3123040: Improperly Issued Digital Certificates Could Allow Spoofing
     "87313",   # MS KB3119884: Improperly Issued Digital Certificates Could Allow Spoofing
-    "204959",  # 
-    "213855",
-    "SC-3576",
-    "SC-2147",
+    "15901",  # 
+    "20007",
+    "31705",
+    "42873",
+    "58453",
+    "70658",
+    "78479",
+    "104743",
+    "153953",
+    "157288",
 }
 
 #-------------------------------------------------------------------------------
