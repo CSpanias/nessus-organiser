@@ -116,6 +116,36 @@ def generate_markdown(
             commentary_output.append(finding.commentary)
             commentary_output.append("")
 
+        if finding.category == "unsupported_software":
+
+            commentary_output.append(
+                "Of the identified unsupported software instances, "
+                f"{statistics['high_risk']['legacy_vulnerabilities']:,} "
+                "had a CVSSv3 base score of 7.0 or greater. These "
+                "systems are exposed to publicly known vulnerabilities "
+                "for which security updates may no longer be available "
+                "from the vendor, increasing the likelihood that newly "
+                "discovered weaknesses will remain unaddressed and may "
+                "be exploitable by an attacker."
+            )
+
+            commentary_output.append("")
+
+        if finding.category == "missing_security_patches":
+
+            commentary_output.append(
+                "Analysis of the identified missing security updates found "
+                f"that {statistics['high_risk']['patch_vulnerabilities']:,} "
+                "vulnerability instances had a CVSSv3 base score of "
+                "7.0 or greater. These vulnerabilities represent the "
+                "highest-risk subset of the identified patching issues "
+                "and should be prioritised for remediation to reduce "
+                "exposure to publicly known attack techniques and "
+                "vendor-addressed security weaknesses."
+            )
+
+            commentary_output.append("")
+
         #-----------------------------------------------------------------------
         # Legacy Frequency Table
         #-----------------------------------------------------------------------

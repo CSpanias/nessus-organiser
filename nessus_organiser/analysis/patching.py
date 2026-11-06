@@ -158,6 +158,27 @@ def build_patch_management_statistics(
     total_count = patch_count + legacy_count
 
     #-----------------------------------------------------------------------
+    # ITHC Statistics
+    #-----------------------------------------------------------------------
+    high_risk_patch_vulnerabilities = sum(
+        1
+        for finding in patch_findings
+        if (
+            finding.cvss3_base_score is not None
+            and finding.cvss3_base_score >= 7.0
+        )
+    )
+
+    high_risk_legacy_vulnerabilities = sum(
+        1
+        for finding in legacy_findings
+        if (
+            finding.cvss3_base_score is not None
+            and finding.cvss3_base_score >= 7.0
+        )
+    )
+
+    #-----------------------------------------------------------------------
     # Severity Distribution
     #-----------------------------------------------------------------------
     severity_counter = Counter()
@@ -233,6 +254,10 @@ def build_patch_management_statistics(
             "patch_vulnerabilities": patch_count,
             "legacy_vulnerabilities": legacy_count,
             "total_vulnerabilities": total_count,
+        },
+        "ithc": {
+            "high_risk_patch_vulnerabilities": high_risk_patch_vulnerabilities,
+            "high_risk_legacy_vulnerabilities": high_risk_legacy_vulnerabilities,
         },
         "severity_distribution": severity_distribution,
         "top_patch_findings": top_patch_findings,

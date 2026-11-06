@@ -5,7 +5,7 @@ Rules used to identify unsupported or end-of-life software.
 """
 
 #-------------------------------------------------------------------------------
-# Patching 
+# PATCHING
 #-------------------------------------------------------------------------------
 PATCH_MANAGEMENT_RULES = {
 
@@ -53,7 +53,7 @@ PATCHING_EXCLUDED_PLUGIN_IDS = {
 }
 
 #-------------------------------------------------------------------------------
-# Legacy
+# LEGACY
 #-------------------------------------------------------------------------------
 LEGACY_PLUGIN_IDS = {
     "156860",  # Apache Log4j 1.x Multiple Vulnerabilities
