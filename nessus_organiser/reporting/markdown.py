@@ -15,6 +15,7 @@ def generate_markdown(
     title: str,
     introduction: str | None = None,
     statistics: dict | None = None,
+    ithc: bool = False,
 ) -> None:
     """
     Generate a Markdown report from Finding objects.
@@ -116,26 +117,30 @@ def generate_markdown(
             commentary_output.append(finding.commentary)
             commentary_output.append("")
 
-        if finding.category == "unsupported_software":
+        #-----------------------------------------------------------------------
+        # ITHC STATISTICS
+        #-----------------------------------------------------------------------
+
+        if ithc and finding.category == "unsupported_software":
 
             commentary_output.append(
-                "Of the identified unsupported software instances, "
+                "Of the identified unsupported software findings, "
                 f"{statistics['high_risk']['legacy_vulnerabilities']:,} "
                 "had a CVSSv3 base score of 7.0 or greater. These "
-                "systems are exposed to publicly known vulnerabilities "
-                "for which security updates may no longer be available "
-                "from the vendor, increasing the likelihood that newly "
-                "discovered weaknesses will remain unaddressed and may "
-                "be exploitable by an attacker."
+                "findings relate to software that no longer receives "
+                "vendor security updates and therefore presents an "
+                "increased risk of exposure to publicly known and "
+                "future vulnerabilities."
             )
+
 
             commentary_output.append("")
 
-        if finding.category == "missing_security_patches":
+        if ithc and finding.category == "missing_security_patches":
 
             commentary_output.append(
-                "Analysis of the identified missing security updates found "
-                f"that {statistics['high_risk']['patch_vulnerabilities']:,} "
+                "Analysis of the identified missing security updates "
+                f"found that {statistics['high_risk']['patch_vulnerabilities']:,} "
                 "vulnerability instances had a CVSSv3 base score of "
                 "7.0 or greater. These vulnerabilities represent the "
                 "highest-risk subset of the identified patching issues "

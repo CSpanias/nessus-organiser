@@ -37,7 +37,7 @@ def main() -> None:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     #---------------------------------------------------------------------------
-    # All module
+    # All modules
     #---------------------------------------------------------------------------
     all_parser = subparsers.add_parser(
         "all",
@@ -63,6 +63,12 @@ def main() -> None:
         choices=["internal", "external"],
         default="internal",
         help=("Assessment scope used when generating commentary."),
+    )
+
+    all_parser.add_argument(
+        "--ithc",
+        action="store_true",
+        help="Enable ITHC-specific reporting.",
     )
 
     #---------------------------------------------------------------------------
@@ -142,6 +148,12 @@ def main() -> None:
         choices=["internal", "external"],
         default="internal",
         help="Assessment scope.",
+    )
+
+    patching_parser.add_argument(
+        "--ithc",
+        action="store_true",
+        help="Enable ITHC-specific reporting.",
     )
 
     #---------------------------------------------------------------------------

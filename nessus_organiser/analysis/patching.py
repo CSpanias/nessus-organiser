@@ -160,7 +160,7 @@ def build_patch_management_statistics(
     #-----------------------------------------------------------------------
     # ITHC Statistics
     #-----------------------------------------------------------------------
-    high_risk_patch_vulnerabilities = sum(
+    patch_cvss_7_or_higher = sum(
         1
         for finding in patch_findings
         if (
@@ -169,7 +169,7 @@ def build_patch_management_statistics(
         )
     )
 
-    high_risk_legacy_vulnerabilities = sum(
+    legacy_cvss_7_or_higher = sum(
         1
         for finding in legacy_findings
         if (
@@ -255,9 +255,9 @@ def build_patch_management_statistics(
             "legacy_vulnerabilities": legacy_count,
             "total_vulnerabilities": total_count,
         },
-        "ithc": {
-            "high_risk_patch_vulnerabilities": high_risk_patch_vulnerabilities,
-            "high_risk_legacy_vulnerabilities": high_risk_legacy_vulnerabilities,
+        "high_risk": {
+            "patch_vulnerabilities": patch_cvss_7_or_higher,
+            "legacy_vulnerabilities": legacy_cvss_7_or_higher,
         },
         "severity_distribution": severity_distribution,
         "top_patch_findings": top_patch_findings,

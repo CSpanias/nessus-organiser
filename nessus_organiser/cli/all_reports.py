@@ -17,6 +17,7 @@ from nessus_organiser.cli import tls
 def run(
     nessus_file: Path,
     scope: str,
+    ithc: bool = False,
 ) -> None:
     """
     Generate all supported reports.
@@ -43,4 +44,5 @@ def run(
         nessus_file=nessus_file,
         output_file=Path("patch-management-review.md"),
         scope=scope,
+        ithc=ithc,
     )

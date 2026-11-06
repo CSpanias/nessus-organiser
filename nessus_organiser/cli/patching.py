@@ -28,6 +28,7 @@ def run(
     nessus_file: Path,
     output_file: Path,
     scope: str,
+    ithc: bool = False,
 ) -> None:
     """
     Generate a Patch Management report from a Nessus scan.
@@ -90,14 +91,6 @@ def run(
         )
     )
 
-    patch_statistics = (
-        build_patch_management_statistics(
-            grouped_findings=(
-                organisation_result.grouped_findings
-            )
-        )
-    )
-
     statistics = (
         build_patch_management_statistics(
             grouped_findings=(
@@ -119,6 +112,7 @@ def run(
             introduction=patch_management_content.get(
                 "introduction"
             ),
+            ithc=ithc,
         )
 
     print()
