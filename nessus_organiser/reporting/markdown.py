@@ -124,29 +124,37 @@ def generate_markdown(
         if ithc and finding.category == "unsupported_software":
 
             commentary_output.append(
-                "Of the identified unsupported software findings, "
+                "For ITHC reporting purposes, unsupported software findings "
+                "associated with High and Critical severity vulnerabilities "
+                "require particular consideration, as unresolved issues may "
+                "need to be addressed through the organisation's remediation "
+                "activities or documented within a Remediation Action Plan. "
+                f"Of the {statistics['summary']['legacy_vulnerabilities']:,} "
+                "unsupported software instances identified during testing, "
                 f"{statistics['high_risk']['legacy_vulnerabilities']:,} "
-                "had a CVSSv3 base score of 7.0 or greater. These "
-                "findings relate to software that no longer receives "
-                "vendor security updates and therefore presents an "
-                "increased risk of exposure to publicly known and "
-                "future vulnerabilities."
+                "had a CVSSv3 base score of 7.0 or greater. These findings "
+                "relate to software that no longer receives vendor security "
+                "updates, increasing the risk that affected systems remain "
+                "exposed to known and future vulnerabilities."
             )
-
 
             commentary_output.append("")
 
         if ithc and finding.category == "missing_security_patches":
 
             commentary_output.append(
-                "Analysis of the identified missing security updates "
-                f"found that {statistics['high_risk']['patch_vulnerabilities']:,} "
-                "vulnerability instances had a CVSSv3 base score of "
-                "7.0 or greater. These vulnerabilities represent the "
-                "highest-risk subset of the identified patching issues "
-                "and should be prioritised for remediation to reduce "
-                "exposure to publicly known attack techniques and "
-                "vendor-addressed security weaknesses."
+                "ITHC guidance requires organisations to demonstrate how "
+                "identified High and Critical severity vulnerabilities have "
+                "been remediated or are being managed through a documented "
+                "remediation plan. Analysis of the identified missing security "
+                "updates found that "
+                f"{statistics['high_risk']['patch_vulnerabilities']:,} "
+                "vulnerability instances had a CVSSv3 base score of 7.0 or "
+                "greater. These vulnerabilities represent the highest-risk "
+                "subset of the identified patching issues and should be "
+                "prioritised for remediation to reduce exposure to publicly "
+                "known attack techniques and vendor-addressed security "
+                "weaknesses."
             )
 
             commentary_output.append("")
