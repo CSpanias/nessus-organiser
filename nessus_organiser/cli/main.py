@@ -167,6 +167,7 @@ def main() -> None:
             all_reports.run(
                 nessus_file=args.nessus_file,
                 scope=args.scope,
+                ithc=args.ithc,
             )
 
         case "tls":
@@ -181,6 +182,7 @@ def main() -> None:
                 nessus_file=args.nessus_file,
                 output_file=args.output,
                 scope=args.scope,
+                ithc=args.ithc,
             )
 
 
