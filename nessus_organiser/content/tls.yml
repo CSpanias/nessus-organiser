@@ -159,8 +159,14 @@ weak_cipher_suites:
       AES-GCM or ChaCha20-Poly1305.
     - Prefer cipher suites that provide forward secrecy through ECDHE key
       exchange.
-    - Periodically review TLS configurations to ensure deprecated algorithms
-      are removed as standards evolve.
+    - Periodically review TLS configurations to ensure weak, deprecated, or
+      unnecessary cipher suites and algorithms are removed as standards
+      evolve.
+    - Ensure TLS libraries and cryptographic implementations (e.g. OpenSSL,
+      LibreSSL, BoringSSL, or platform TLS providers) are kept up to date to
+      address vulnerabilities affecting cipher negotiation, session handling,
+      and protocol processing.
+
 
   references:
     - https://support.microsoft.com/en-gb/topic/microsoft-security-advisory-update-for-disabling-rc4-479fd6f0-c7b5-0671-975b-c45c3f2c0540#ID0EFR

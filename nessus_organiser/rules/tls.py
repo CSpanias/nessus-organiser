@@ -74,25 +74,26 @@ TLS_EVIDENCE = {
     "89058": "SSL 2.0 support",
 
     # TLS
+    "42880": "TLS 1.0 insecure renegotiation support",
     "104743": "TLS 1.0 support",
     "157288": "TLS 1.1 support",
-    "42880": "TLS 1.0 insecure renegotiation support",
 
     # Weak Cipher Suites
-    "65821": "RC4-based cipher suites",
-    "42873": "3DES-based cipher suites",
-    "81606": "Export-grade RSA cipher suites",
     "31705": "Anonymous cipher suites",
-
+    "42873": "3DES-based cipher suites",
+    "51893": "Disabled cipher suite negotiation vulnerability",
+    "65821": "RC4-based cipher suites",
+    "81606": "Export-grade RSA cipher suites",
+    
     # DH
-    "83875": "Weak Diffie-Hellman parameters (≤1024-bit)",
     "53360": "Weak Diffie-Hellman key exchange implementation",
+    "83875": "Weak Diffie-Hellman parameters (≤1024-bit)",
 
     # Certificate with weak hashing algorithm
     "35291": "Certificate chain signed using a weak hashing algorithm",
     "86067": "Certificate chain signed using SHA-1",
 
     # Certificate with small RSA keys
-    "69551": "Certificate chain contains RSA keys smaller than 2048 bits",
     "60108": "Certificate chain contains RSA keys smaller than 1024 bits",
+    "69551": "Certificate chain contains RSA keys smaller than 2048 bits",
 }
