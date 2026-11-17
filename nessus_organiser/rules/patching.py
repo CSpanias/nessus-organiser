@@ -60,5 +60,6 @@ PATCHING_EXCLUDED_PLUGIN_IDS = {
 # LEGACY
 #-------------------------------------------------------------------------------
 LEGACY_PLUGIN_IDS = {
+    "156103",  # Apache Log4j 1.2 JMSAppender Remote Code Execution
     "156860",  # Apache Log4j 1.x Multiple Vulnerabilities
 }
