@@ -69,7 +69,7 @@ def generate_markdown(
 
         # Assessment Summary Table
         output.append(
-            "The following table provides a summary of the identified "
+            "The below table provides a summary of the identified "
             "patch-management-related vulnerabilities across the assessed "
             "environment:"
         )

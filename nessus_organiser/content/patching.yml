@@ -49,7 +49,7 @@ unsupported_software:
 
   solution: |
     Upgrade, replace, or migrate affected software to vendor-supported
-    versions. Additionally:
+    versions. Moreover:
 
     - Maintain an inventory of software products and support lifecycles.
     - Monitor vendor end-of-life and end-of-support announcements.
