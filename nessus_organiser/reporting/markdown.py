@@ -94,6 +94,12 @@ def generate_markdown(
         )
 
         output.append("")
+        output.append(
+            "Counts are deduplicated by host and Nessus plugin ID. A finding "
+            "detected on multiple ports of the same host is counted once; "
+            "the same plugin on different hosts is counted separately."
+        )
+        output.append("")
     
 
     for finding in findings:
