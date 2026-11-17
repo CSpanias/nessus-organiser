@@ -19,8 +19,12 @@ PATCH_MANAGEMENT_RULES = {
         "apply security update",
         "apply updates",
         "upgrade to",
+        "upgrade firmware",
         "apply the appropriate patch",
         "upgrade to the relevant fixed version",
+        "update .net core",
+        "update to .net core",
+        "update asp.net core",
     },
 
     "plugin_output": {
