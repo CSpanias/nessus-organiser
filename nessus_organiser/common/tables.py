@@ -4,6 +4,7 @@ nessus_organiser.common.tables
 Helpers for rendering Rich-formatted tables to the terminal.
 """
 
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -23,9 +24,13 @@ def print_summary_table(
             Table rows represented as Metric/Value pairs.
     """
 
-    table = Table(title=title)
+    table = Table(
+        title=title,
+        box=box.ROUNDED,
+        header_style="bold",
+    )
 
-    table.add_column("Metric")
+    table.add_column("Metric", no_wrap=True, style="bold")
     table.add_column("Value", justify="right")
 
     for metric, value in rows:

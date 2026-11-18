@@ -12,6 +12,7 @@ Currently supported report types include:
 
 - TLS Reviews
 - Patch Management Reviews
+- SSH Reviews
 
 ## Installation
 
@@ -53,6 +54,13 @@ uv tool upgrade nessus-organiser
 - Generate technical commentary and remediation guidance
 - Produce consultant-ready Markdown reports
 
+### SSH Reviews
+
+- Identify SSH cryptographic hardening weaknesses
+- Consolidate related findings into root-cause observations
+- Generate technical commentary and remediation guidance
+- Produce consultant-ready Markdown reports
+
 ### Reporting
 
 - Generate Markdown reports automatically
@@ -68,6 +76,9 @@ nessus-organiser tls internal.nessus
 
 # Generate a Patch Management Report
 nessus-organiser patching internal.nessus
+
+# Generate an SSH Report
+nessus-organiser ssh internal.nessus
 
 # Generate All Support Reports
 nessus-organiser all internal.nessus

@@ -11,6 +11,7 @@ from textwrap import dedent
 
 from nessus_organiser.cli import all_reports
 from nessus_organiser.cli.patching import run as run_patching
+from nessus_organiser.cli.ssh import run as run_ssh
 from nessus_organiser.cli.tls import run as run_tls
 
 
@@ -29,8 +30,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="nessus-organiser",
         description=(
-            "Generate TLS and Patch Management assessment reports from Nessus "
-            "(.nessus) scan files."
+            "Generate TLS, Patch Management, and SSH assessment reports from "
+            "Nessus (.nessus) scan files."
         ),
         formatter_class=CustomFormatter,
     )
@@ -157,6 +158,46 @@ def main() -> None:
     )
 
     #---------------------------------------------------------------------------
+    # SSH module
+    #---------------------------------------------------------------------------
+    ssh_parser = subparsers.add_parser(
+        "ssh",
+        help="Generate an SSH report.",
+        description=(
+            "Analyse SSH-related findings and generate an SSH cryptographic "
+            "review report."
+        ),
+        formatter_class=CustomFormatter,
+        epilog=dedent("""
+        Examples:
+            nessus-organiser ssh internal.nessus
+            nessus-organiser ssh -S external external.nessus
+        """),
+    )
+
+    ssh_parser.add_argument(
+        "nessus_file",
+        type=Path,
+        help="Path to the Nessus (.nessus) file to analyse.",
+    )
+
+    ssh_parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        default=Path("ssh-review.md"),
+        help="Output Markdown file.",
+    )
+
+    ssh_parser.add_argument(
+        "-S",
+        "--scope",
+        choices=["internal", "external"],
+        default="internal",
+        help="Assessment scope.",
+    )
+
+    #---------------------------------------------------------------------------
     # Parser Assembly
     #---------------------------------------------------------------------------
     args = parser.parse_args()
@@ -183,6 +224,13 @@ def main() -> None:
                 output_file=args.output,
                 scope=args.scope,
                 ithc=args.ithc,
+            )
+
+        case "ssh":
+            run_ssh(
+                nessus_file=args.nessus_file,
+                output_file=args.output,
+                scope=args.scope,
             )
 
 

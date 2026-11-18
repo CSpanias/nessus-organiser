@@ -4,9 +4,102 @@ nessus_organiser.reporting.markdown
 Generate Markdown reports from Finding objects.
 """
 
+import re
+
 from pathlib import Path
 
 from nessus_organiser.models.finding import Finding
+
+_LIST_ITEM_PATTERN = re.compile(r"^(\s*)([-*+]|\d+[.)])\s+(.*)$")
+_HEADING_PATTERN = re.compile(r"^#{1,6}\s+")
+_CODE_FENCE_PATTERN = re.compile(r"^\s*(`{3}|~{3})")
+
+
+def _reflow_markdown(text: str | None) -> str:
+    """Normalise hard-wrapped prose into flowing paragraphs."""
+
+    if not text:
+        return ""
+
+    lines = text.splitlines()
+
+    output: list[str] = []
+    paragraph: list[str] = []
+    list_item: dict | None = None
+    in_fence = False
+
+    def flush_paragraph() -> None:
+        if paragraph:
+            output.append(" ".join(paragraph))
+            paragraph.clear()
+
+    def flush_list_item() -> None:
+        nonlocal list_item
+        if list_item is not None:
+            output.append(list_item["text"])
+            list_item = None
+
+    for line in lines:
+
+        if _CODE_FENCE_PATTERN.match(line):
+            flush_paragraph()
+            flush_list_item()
+            in_fence = not in_fence
+            output.append(line.rstrip())
+            continue
+
+        if in_fence:
+            output.append(line.rstrip())
+            continue
+
+        stripped = line.strip()
+
+        if not stripped:
+            flush_paragraph()
+            flush_list_item()
+            output.append("")
+            continue
+
+        if _HEADING_PATTERN.match(stripped):
+            flush_paragraph()
+            flush_list_item()
+            output.append(stripped)
+            continue
+
+        list_match = _LIST_ITEM_PATTERN.match(line)
+        if list_match:
+
+            indent = len(list_match.group(1))
+            marker = list_match.group(2)
+            content = list_match.group(3)
+
+            flush_paragraph()
+            flush_list_item()
+
+            list_item = {
+                "indent": indent,
+                "text": f"{' ' * indent}{marker} {content.strip()}",
+            }
+            continue
+
+        if list_item is not None:
+
+            line_indent = len(line) - len(line.lstrip(" "))
+
+            if line_indent > list_item["indent"]:
+                list_item["text"] += " " + stripped
+            else:
+                flush_list_item()
+                paragraph.append(stripped)
+
+            continue
+
+        paragraph.append(stripped)
+
+    flush_paragraph()
+    flush_list_item()
+
+    return "\n".join(output)
 
 
 def generate_markdown(
@@ -14,6 +107,7 @@ def generate_markdown(
     output_path: Path,
     title: str,
     introduction: str | None = None,
+    remediation_introduction: str | None = None,
     statistics: dict | None = None,
     ithc: bool = False,
 ) -> None:
@@ -35,6 +129,10 @@ def generate_markdown(
         introduction:
             Optional introductory text displayed before
             the finding sections.
+
+        remediation_introduction:
+            Optional introductory text displayed before
+            the remediation sections.
 
         statistics:
             Optional assessment statistics displayed within the report. These 
@@ -60,7 +158,8 @@ def generate_markdown(
     # Finding Introduction Section
     #---------------------------------------------------------------------------
     if introduction:
-        output.append(introduction)
+        output.append(_reflow_markdown(introduction))
+        output.append("")
 
     #---------------------------------------------------------------------------
     # Overview Table
@@ -115,12 +214,12 @@ def generate_markdown(
         #-----------------------------------------------------------------------
         if finding.commentary_evidence:
 
-            commentary_output.append(finding.commentary_evidence)
+            commentary_output.append(_reflow_markdown(finding.commentary_evidence))
             commentary_output.append("")
 
         if finding.commentary:
 
-            commentary_output.append(finding.commentary)
+            commentary_output.append(_reflow_markdown(finding.commentary))
             commentary_output.append("")
 
         #-----------------------------------------------------------------------
@@ -217,6 +316,10 @@ def generate_markdown(
     remediation_output.append("# Remediation")
     remediation_output.append("")
 
+    if remediation_introduction:
+        remediation_output.append(_reflow_markdown(remediation_introduction))
+        remediation_output.append("")
+
     for finding in findings:
 
         if not finding.solution:
@@ -225,7 +328,7 @@ def generate_markdown(
         remediation_output.append(f"### {finding.title}")
         remediation_output.append("")
 
-        remediation_output.append(finding.solution)
+        remediation_output.append(_reflow_markdown(finding.solution))
         remediation_output.append("")
 
     #---------------------------------------------------------------------------

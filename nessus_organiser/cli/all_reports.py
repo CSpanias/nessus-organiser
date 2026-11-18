@@ -11,6 +11,7 @@ single command execution.
 from pathlib import Path
 
 from nessus_organiser.cli import patching
+from nessus_organiser.cli import ssh
 from nessus_organiser.cli import tls
 
 
@@ -45,4 +46,10 @@ def run(
         output_file=Path("patch-management-review.md"),
         scope=scope,
         ithc=ithc,
+    )
+
+    ssh.run(
+        nessus_file=nessus_file,
+        output_file=Path("ssh-review.md"),
+        scope=scope,
     )

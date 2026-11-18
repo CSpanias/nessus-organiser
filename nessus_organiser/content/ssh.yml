@@ -1,0 +1,226 @@
+title: Insecure SSH Cryptographic Configuration
+
+introduction: |
+  The following findings relate to SSH cryptographic hardening controls.
+  While the affected systems support modern and secure cryptographic
+  algorithms, several legacy algorithms remain enabled for backwards
+  compatibility.
+
+remediation_introduction: |
+  To align SSH services with current cryptographic best practices, the
+  following security hardening measures are recommended.
+
+terrapin_prefix_truncation:
+
+  id: SSH-001
+
+  title: Terrapin Prefix Truncation Weakness (CVE-2023-48795)
+
+  severity:
+
+    internal: Informational
+    external: Informational
+
+  commentary: |
+    Multiple remote SSH servers were vulnerable to an Adversary-in-the-Middle
+    (AitM) prefix truncation weakness known as Terrapin. This can allow a
+    remote, AitM attacker to bypass integrity checks and downgrade the
+    connection's security.
+
+  solution: |
+    Contact the vendor for an update with the strict key exchange
+    countermeasures or disable the affected algorithms.
+
+  references:
+    - https://terrapin-attack.com/
+
+weak_mac_algorithms:
+
+  id: SSH-002
+
+  title: Weak MAC Algorithms Enabled
+
+  severity:
+
+    internal: Informational
+    external: Informational
+
+  commentary: |
+    Various SSH services were found to support weak Message Authentication
+    Code (MAC) algorithms, including MD5-based and truncated (96-bit) MACs.
+
+    These algorithms are considered cryptographically weak and may be
+    susceptible to collision attacks or reduced integrity guarantees. Their
+    use weakens the protection against tampering of SSH session data and may
+    allow an attacker to interfere with or manipulate communications under
+    certain conditions.
+
+    Current best practices recommend the use of strong MAC algorithms such as
+    HMAC-SHA2 family variants, which provide improved resistance against
+    cryptographic attacks.
+
+  solution: |
+    Contact the vendor or consult product documentation to disable MD5 and
+    96-bit MAC algorithms.
+
+  references:
+    - https://datatracker.ietf.org/doc/html/rfc9142
+    - https://www.virtuesecurity.com/kb/ssh-weak-key-exchange-algorithms-enabled/
+    - https://www.rfc-editor.org/rfc/rfc8732.html#name-deprecated-algorithms
+    - https://wiki.mozilla.org/Security/Guidelines/OpenSSH#OpenSSH_server
+
+weak_key_exchange_algorithms:
+
+  id: SSH-003
+
+  title: Weak Key Exchange Algorithms Enabled
+
+  severity:
+
+    internal: Informational
+    external: Informational
+
+  commentary: |
+    The SSH service was configured to support legacy and cryptographically
+    weak key exchange and message authentication algorithms. Specifically, the
+    server allowed the use of:
+
+    - Diffie-Hellman groups relying on SHA-1 (e.g. `diffie-hellman-group1-sha1`,
+      `diffie-hellman-group14-sha1`, and `diffie-hellman-group-exchange-sha1`)
+    - SHA-1-based message authentication codes
+
+    These algorithms are considered deprecated in modern cryptographic
+    standards due to weaknesses in the SHA-1 hashing algorithm and, in some
+    cases, the use of insufficiently strong key sizes. In particular, certain
+    Diffie-Hellman groups use small moduli (e.g. 1024-bit) or are associated
+    with known attacks such as Logjam, which may allow an attacker to weaken
+    or compromise the confidentiality of SSH sessions under specific
+    conditions.
+
+    Although stronger algorithms are also supported by the service, the
+    continued availability of legacy options introduces unnecessary risk, as
+    clients may negotiate these weaker algorithms in certain scenarios,
+    particularly when older or misconfigured clients are involved.
+
+  solution: |
+    Disable legacy SSH algorithms based on SHA-1 and weak Diffie-Hellman
+    groups, and restrict the service to modern, secure cryptographic options
+    via server configuration.
+
+  references:
+    - https://datatracker.ietf.org/doc/html/rfc9142
+    - https://www.virtuesecurity.com/kb/ssh-weak-key-exchange-algorithms-enabled/
+    - https://www.rfc-editor.org/rfc/rfc8732.html#name-deprecated-algorithms
+    - https://wiki.mozilla.org/Security/Guidelines/OpenSSH#OpenSSH_server
+
+cbc_mode_ciphers:
+
+  id: SSH-004
+
+  title: CBC Mode Ciphers Enabled
+
+  severity:
+
+    internal: Informational
+    external: Informational
+
+  commentary: |
+    The SSH service was configured to support cipher block chaining (CBC) mode
+    encryption algorithms (e.g. `aes128-cbc` and `aes256-cbc`). These cipher
+    modes are considered weak and deprecated in modern SSH configurations due
+    to their susceptibility to various cryptographic attacks.
+
+    In particular, CBC-mode ciphers rely on separate message authentication
+    mechanisms and may be vulnerable to plaintext recovery and integrity
+    attacks in certain conditions, especially when combined with weaker
+    message authentication codes or implementation flaws.
+
+    Although more secure cipher modes (e.g. CTR and GCM) were also supported
+    by the service, the continued availability of CBC-based algorithms
+    introduces unnecessary risk, as clients may negotiate these weaker options
+    under specific circumstances.
+
+  solution: |
+    Disable CBC ciphers and restrict SSH to modern algorithms such as CTR or
+    GCM modes via the server configuration.
+
+  references:
+    - https://datatracker.ietf.org/doc/html/rfc9142
+    - https://www.virtuesecurity.com/kb/ssh-weak-key-exchange-algorithms-enabled/
+    - https://www.rfc-editor.org/rfc/rfc8732.html#name-deprecated-algorithms
+    - https://wiki.mozilla.org/Security/Guidelines/OpenSSH#OpenSSH_server
+
+weak_algorithms_supported:
+
+  id: SSH-005
+
+  title: Weak Algorithms Supported
+
+  severity:
+
+    internal: Informational
+    external: Informational
+
+  commentary: |
+    The SSH service was configured to support weak cryptographic algorithms,
+    specifically the deprecated Arcfour (RC4) stream cipher and/or other
+    obsolete cipher options. These algorithms are no longer considered
+    suitable for protecting sensitive communications due to well-documented
+    cryptographic weaknesses and the availability of significantly stronger
+    alternatives.
+
+    RC4-based ciphers suffer from statistical biases within the keystream
+    generation process, which may allow portions of encrypted data to be
+    recovered under certain conditions. As a result, RFC 4253 advises against
+    their use, and modern SSH implementations have progressively removed
+    support for such algorithms. The continued availability of weak SSH
+    ciphers unnecessarily reduces the overall strength of the service's
+    cryptographic configuration.
+
+    Although modern SSH clients generally prioritise stronger algorithms
+    during negotiation, the presence of deprecated ciphers expands the attack
+    surface and may allow weaker cryptographic protections to be negotiated by
+    legacy clients or under exceptional circumstances.
+
+  solution: |
+    Disable weak SSH cipher suites and restrict the service to modern
+    cryptographic algorithms supported by current SSH implementations. In
+    addition:
+
+    - Remove support for Arcfour (RC4) and any other deprecated cipher
+      algorithms.
+    - Restrict SSH to modern ciphers such as ChaCha20-Poly1305, AES-GCM, and
+      AES-CTR.
+    - Ensure SSH software is updated to a current supported version that
+      disables weak cryptographic algorithms by default.
+    - Periodically review SSH cryptographic settings to ensure deprecated
+      algorithms are removed as industry standards evolve.
+
+  references:
+    - http://www.openssh.com
+
+ssh_protocol_v1:
+
+  id: SSH-006
+
+  title: Protocol Version 1 Session Key Retrieval
+
+  severity:
+
+    internal: Informational
+    external: Informational
+
+  commentary: |
+    The remote SSH service is configured to support SSH protocol version 1.
+    SSHv1 is considered deprecated and insecure due to multiple fundamental
+    design weaknesses in its cryptographic implementation.
+
+    These include lack of strong integrity protection, susceptibility to
+    session key recovery attacks, and the use of outdated algorithms. As a
+    result, an attacker may be able to intercept and manipulate communications
+    or recover session keys, compromising the confidentiality and integrity of
+    SSH sessions.
+
+  solution: |
+    Modern best practice mandates the exclusive use of SSHv2, which provides
+    significantly stronger security guarantees.

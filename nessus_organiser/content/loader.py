@@ -70,3 +70,14 @@ def load_patch_management_content() -> dict:
     """
 
     return _load_content("patching.yml")
+
+
+def load_ssh_content() -> dict:
+    """
+    Load SSH finding definitions.
+
+    Returns:
+        Dictionary containing SSH finding metadata loaded from ssh.yml.
+    """
+
+    return _load_content("ssh.yml")
