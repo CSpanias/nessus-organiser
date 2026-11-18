@@ -38,28 +38,24 @@ uv tool upgrade nessus-organiser
 - Extract host, service, plugin, CVSS, and reference information
 - Deduplicate findings where appropriate
 - Generate reporting statistics automatically
+- Generate technical commentary and remediation guidance
+- Produce consultant-ready Markdown reports
 
 ### TLS Reviews
 
 - Identify TLS-related vulnerabilities
 - Consolidate related findings into root-cause observations
-- Generate technical commentary and remediation guidance
-- Produce consultant-ready Markdown reports
 
 ### Patch Management Reviews
 
 - Identify missing security updates
 - Identify unsupported and end-of-life software
 - Calculate vulnerability statistics
-- Generate technical commentary and remediation guidance
-- Produce consultant-ready Markdown reports
 
 ### SSH Reviews
 
 - Identify SSH cryptographic hardening weaknesses
 - Consolidate related findings into root-cause observations
-- Generate technical commentary and remediation guidance
-- Produce consultant-ready Markdown reports
 
 ### Reporting
 
