@@ -156,8 +156,13 @@ nessus-organiser ssh internal.nessus
 # Generate All Support Reports
 nessus-organiser all internal.nessus
 
-# List supported plugin IDs per module
+# List supported plugin IDs for every module
 nessus-organiser --list-plugin-ids
+
+# List plugin IDs for a single module
+nessus-organiser ssh --list-plugin-ids
+nessus-organiser tls --list-plugin-ids
+nessus-organiser patching --list-plugin-ids
 ```
 
 ## Example Output

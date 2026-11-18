@@ -53,10 +53,29 @@ _KEYWORD_FIELD_LABELS = {
 }
 
 
-def run() -> None:
+def run(module: str | None = None) -> None:
     """
-    Print the plugin IDs recognised by each report module.
+    Print the plugin IDs recognised by a report module.
+
+    Args:
+        module:
+            Report module to display. Use ``None`` or ``"all"`` to display
+            every module.
     """
+
+    if module == "ssh":
+        _print_ssh()
+        return
+
+    if module == "tls":
+        _print_tls()
+        return
+
+    if module == "patching":
+        _print_patching()
+        print()
+        _print_global_exclusions()
+        return
 
     _print_ssh()
     print()

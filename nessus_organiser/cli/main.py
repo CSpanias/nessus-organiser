@@ -16,6 +16,20 @@ from nessus_organiser.cli.plugins import run as run_plugins
 from nessus_organiser.cli.ssh import run as run_ssh
 from nessus_organiser.cli.tls import run as run_tls
 
+_SUPPORTED_COMMANDS = ("all", "tls", "patching", "ssh")
+
+
+def _detect_module(argv: list[str]) -> str | None:
+    """
+    Return the report module present on the command line, if any.
+    """
+
+    for token in argv[1:]:
+        if token in _SUPPORTED_COMMANDS:
+            return token
+
+    return None
+
 
 def main() -> None:
     """
@@ -23,7 +37,7 @@ def main() -> None:
     """
 
     if "--list-plugin-ids" in sys.argv:
-        run_plugins()
+        run_plugins(module=_detect_module(sys.argv))
         return
 
      # Parsers configuration
