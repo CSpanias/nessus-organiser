@@ -11,6 +11,7 @@ from textwrap import dedent
 
 from nessus_organiser.cli import all_reports
 from nessus_organiser.cli.patching import run as run_patching
+from nessus_organiser.cli.plugins import run as run_plugins
 from nessus_organiser.cli.ssh import run as run_ssh
 from nessus_organiser.cli.tls import run as run_tls
 
@@ -35,7 +36,16 @@ def main() -> None:
         ),
         formatter_class=CustomFormatter,
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument(
+        "--list-plugin-ids",
+        action="store_true",
+        help=(
+            "List the Nessus plugin IDs recognised by each report module, "
+            "then exit."
+        ),
+    )
+
+    subparsers = parser.add_subparsers(dest="command")
 
     #---------------------------------------------------------------------------
     # All modules
@@ -201,6 +211,14 @@ def main() -> None:
     # Parser Assembly
     #---------------------------------------------------------------------------
     args = parser.parse_args()
+
+    if args.list_plugin_ids:
+        run_plugins()
+        return
+
+    if args.command is None:
+        parser.print_help()
+        return
 
     match args.command:
 

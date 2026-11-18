@@ -38,3 +38,37 @@ def print_summary_table(
         table.add_row(metric, value)
 
     Console().print(table)
+
+
+def print_table(
+    title: str,
+    columns: list[str],
+    rows: list[tuple],
+) -> None:
+    """
+    Print a multi-column table to the terminal.
+
+    Args:
+        title:
+            Title displayed above the table.
+
+        columns:
+            Column headings.
+
+        rows:
+            Table rows.
+    """
+
+    table = Table(
+        title=title,
+        box=box.ROUNDED,
+        header_style="bold",
+    )
+
+    for column in columns:
+        table.add_column(column)
+
+    for row in rows:
+        table.add_row(*[str(cell) for cell in row])
+
+    Console().print(table)
