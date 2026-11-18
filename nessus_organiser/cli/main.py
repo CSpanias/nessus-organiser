@@ -5,6 +5,7 @@ Application entry point.
 """
 
 import argparse
+import sys
 
 from pathlib import Path
 from textwrap import dedent
@@ -20,6 +21,10 @@ def main() -> None:
     """
     Application entry point.
     """
+
+    if "--list-plugin-ids" in sys.argv:
+        run_plugins()
+        return
 
      # Parsers configuration
     class CustomFormatter(
@@ -211,10 +216,6 @@ def main() -> None:
     # Parser Assembly
     #---------------------------------------------------------------------------
     args = parser.parse_args()
-
-    if args.list_plugin_ids:
-        run_plugins()
-        return
 
     if args.command is None:
         parser.print_help()
