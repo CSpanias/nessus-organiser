@@ -170,7 +170,8 @@ def render_html(
     else:
         content = (
             '<section class="panel"><h2>Report Overview</h2>'
-            + _copy_controls(format_markdown(sections), "report") + overview
+            + ("" if closure_review else _copy_controls(format_markdown(sections), "report"))
+            + overview
             + "</section>" + remediation_intro
             + '<section aria-labelledby="findings-heading">'
             + '<h2 id="findings-heading">Findings</h2>' + search_controls

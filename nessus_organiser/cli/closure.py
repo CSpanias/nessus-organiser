@@ -10,12 +10,12 @@ from nessus_organiser.content.loader import load_closure_content
 from nessus_organiser.findings.factory import build_finding
 from nessus_organiser.models.plugin import PluginFinding
 from nessus_organiser.reporting.html import generate_html
-from nessus_organiser.reporting.markdown import escape_markdown_text
 
 
 def run(
     nessus_file: Path, output_file: Path, scope: str, csacyber: bool = False,
     plugin_findings: list[PluginFinding] | None = None,
+    console: Console | None = None,
 ) -> None:
     if scope not in ("internal", "external"):
         raise ValueError(f"Unknown assessment scope: {scope}")
@@ -26,7 +26,7 @@ def run(
         if scope in definition
     }
     if not definitions:
-        _report_not_generated(f"No closure rules are defined for {scope} scope.")
+        _report_not_generated(f"No closure rules are defined for {scope} scope.", console)
         return
 
     grouped: dict[str, list[PluginFinding]] = {plugin_id: [] for plugin_id in definitions}
@@ -54,16 +54,15 @@ def run(
         )
         if csacyber and definition.get("platform_id"):
             finding.alternate_id = f"SureCloud {definition['platform_id']}"
-        hosts = sorted({plugin.host or "(unknown host)" for plugin in matches})
+        hosts = {plugin.host or "(unknown host)" for plugin in matches}
         finding.commentary_evidence = (
             f"Nessus plugin {plugin_id} was identified on {len(hosts):,} "
-            f"unique {'host' if len(hosts) == 1 else 'hosts'}:\n\n"
-            + "\n".join(f"- {escape_markdown_text(host)}" for host in hosts)
+            f"unique {'host' if len(hosts) == 1 else 'hosts'}."
         )
         findings.append(finding)
 
     if not findings:
-        _report_not_generated("No closure-review plugins were found.")
+        _report_not_generated("No closure-review plugins were found.", console)
         return
 
     generated = generate_html(
@@ -76,6 +75,7 @@ def run(
     print()
     print_summary_table(
         title="Closure Review Summary",
+        console=console,
         rows=[
             ("Assessment Scope", scope),
             ("Matched Plugins", str(len(findings))),
@@ -86,6 +86,6 @@ def run(
     )
 
 
-def _report_not_generated(reason: str) -> None:
+def _report_not_generated(reason: str, console: Console | None = None) -> None:
     message = f"{reason} No closure report was generated."
-    Console(stderr=True).print(message, markup=False)
+    (console or Console(stderr=True)).print(message, markup=False)

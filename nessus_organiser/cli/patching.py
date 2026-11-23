@@ -6,6 +6,8 @@ Patch management report generation commands.
 
 from pathlib import Path
 
+from rich.console import Console
+
 from nessus_organiser.analysis.patching import (
     analyse_patch_management_finding,
     build_patch_management_statistics
@@ -30,6 +32,7 @@ def run(
     scope: str,
     ithc: bool = False,
     plugin_findings: list[PluginFinding] | None = None,
+    console: Console | None = None,
 ) -> None:
     """
     Generate a Patch Management report from a Nessus scan.
@@ -116,6 +119,7 @@ def run(
             ),
             ithc=ithc,
             grouped=True,
+            console=console,
         )
     if generated is None:
         return
@@ -123,6 +127,7 @@ def run(
     print()
     print_summary_table(
         title="Patch Management Analysis Summary",
+        console=console,
         rows=[
             ("Parsed Plugins", f"{len(plugin_findings):,}"),
             ("Excluded Plugins", str(organisation_result.excluded_findings)),

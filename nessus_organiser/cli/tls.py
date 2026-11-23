@@ -6,6 +6,8 @@ TLS report generation commands.
 
 from pathlib import Path
 
+from rich.console import Console
+
 from nessus_organiser.analysis.tls import analyse_tls_finding
 from nessus_organiser.common.counting import (
     count_analysed_plugins,
@@ -26,6 +28,7 @@ def run(
     output_file: Path,
     scope: str,
     plugin_findings: list[PluginFinding] | None = None,
+    console: Console | None = None,
 ) -> None:
     """
     Generate a TLS report from a Nessus scan.
@@ -90,6 +93,7 @@ def run(
         introduction=tls_content.get("introduction"),
         grouped=True,
         show_severity=True,
+        console=console,
     )
     if generated is None:
         return
@@ -97,6 +101,7 @@ def run(
     print()
     print_summary_table(
         title="TLS Analysis Summary",
+        console=console,
         rows=[
             ("Parsed Plugins", f"{len(plugin_findings):,}"),
             ("Excluded Plugins", f"{excluded_plugins}"),

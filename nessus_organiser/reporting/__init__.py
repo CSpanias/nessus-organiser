@@ -24,11 +24,12 @@ def generate_report(
     ithc: bool = False,
     grouped: bool = False,
     show_severity: bool = False,
+    console: Console | None = None,
 ) -> Path | None:
     if output_path.suffix.lower() != ".html":
         raise ValueError("Report output must have a .html extension.")
     if not findings:
-        Console(stderr=True).print(
+        (console or Console(stderr=True)).print(
             f"No findings for {title}; no report was generated.", markup=False
         )
         return None

@@ -12,7 +12,7 @@ from nessus_organiser.models.plugin import PluginFinding
 from nessus_organiser.parsing.nessus import load_nessus
 
 
-def report_progress() -> Progress:
+def report_progress(*, transient: bool = True) -> Progress:
     console = Console()
     return Progress(
         SpinnerColumn(),
@@ -21,7 +21,7 @@ def report_progress() -> Progress:
         TaskProgressColumn(),
         MofNCompleteColumn(),
         console=console,
-        transient=True,
+        transient=transient,
         disable=not console.is_terminal,
     )
 

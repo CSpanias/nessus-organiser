@@ -135,6 +135,7 @@ class HtmlReportTests(unittest.TestCase):
         for label in ("technical commentary", "remediation", "references"):
             self.assertFalse(copies[label].startswith("#"), label)
         closure = copy_payloads(render_html(sections, closure_review=True))
+        self.assertNotIn("report", closure)
         self.assertFalse(closure["closure justification"].startswith("#"))
         self.assertIn("#### References", closure["closure justification"])
 

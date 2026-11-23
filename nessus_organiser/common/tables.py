@@ -12,6 +12,7 @@ from rich.table import Table
 def print_summary_table(
     title: str,
     rows: list[tuple[str, str]],
+    console: Console | None = None,
 ) -> None:
     """
     Print a summary table to the terminal.
@@ -37,7 +38,7 @@ def print_summary_table(
 
         table.add_row(metric, value)
 
-    Console().print(table)
+    (console or Console()).print(table)
 
 
 def print_table(

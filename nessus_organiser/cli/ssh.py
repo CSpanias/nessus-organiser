@@ -6,6 +6,8 @@ SSH report generation commands.
 
 from pathlib import Path
 
+from rich.console import Console
+
 from nessus_organiser.analysis.ssh import analyse_ssh_finding
 from nessus_organiser.common.counting import (
     count_analysed_plugins,
@@ -26,6 +28,7 @@ def run(
     output_file: Path,
     scope: str,
     plugin_findings: list[PluginFinding] | None = None,
+    console: Console | None = None,
 ) -> None:
     """
     Generate an SSH report from a Nessus scan.
@@ -102,6 +105,7 @@ def run(
         remediation_introduction=ssh_content.get(
             "remediation_introduction"
         ),
+        console=console,
     )
     if generated is None:
         return
@@ -109,6 +113,7 @@ def run(
     print()
     print_summary_table(
         title="SSH Analysis Summary",
+        console=console,
         rows=[
             ("Parsed Plugins", f"{len(plugin_findings):,}"),
             ("Excluded Plugins", f"{excluded_plugins}"),

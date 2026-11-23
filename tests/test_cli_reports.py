@@ -7,6 +7,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 from xml.sax.saxutils import escape
 
@@ -52,6 +53,42 @@ def scan_xml(
 
 
 class CliReportTests(unittest.TestCase):
+    def test_interactive_all_clears_progress_before_summaries_and_finishes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            scan = base / "scan.nessus"
+            scan.write_text(
+                scan_xml().replace(
+                    '<ReportItem pluginID="71049" pluginName="SSH" severity="2" port="22" protocol="tcp"/>',
+                    "",
+                ),
+                encoding="utf-8",
+            )
+            output = io.StringIO()
+            console = Console(
+                file=output, force_terminal=True, force_interactive=True,
+                legacy_windows=False, width=100,
+            )
+            with redirect_stdout(output), redirect_stderr(output), \
+                 patch("nessus_organiser.common.progress.Console", return_value=console), \
+                 patch.object(
+                     all_reports, "report_path",
+                     side_effect=lambda name, timestamp: base / f"{name}.html",
+                 ):
+                all_reports.run(scan, "internal")
+
+            rendered = output.getvalue()
+            for title in (
+                "TLS Analysis Summary", "Patch Management Analysis Summary",
+                "No findings for Insecure SSH", "Closure Review Summary",
+            ):
+                with self.subTest(title=title):
+                    self.assertRegex(
+                        rendered, r"\r\x1b\[2K(?:\x1b\[[0-9;]*m)*\s*" + re.escape(title)
+                    )
+            plain = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", rendered)
+            self.assertRegex(plain, r"Reports complete[^\r\n]*100% 4/4")
+
     def test_interactive_scan_progress_reports_real_host_counts(self) -> None:
         output = io.StringIO()
         console = Console(file=output, force_terminal=True, width=100)
@@ -120,11 +157,12 @@ class CliReportTests(unittest.TestCase):
             for name in ("tls-review", "ssh-review", "patch-management-review", "closure-review"):
                 self.assertTrue(self.only_report(base, name).is_file(), name)
             report = self.only_report(base, "closure-review").read_text(encoding="utf-8")
-            for expected in ("10114", "35371", "hostname.bind", "host-a",
+            for expected in ("10114", "35371", "hostname.bind",
                              "Assessment scope: internal.", "time-based authentication",
                              "www.tenable.com/plugins/nessus/10114",
                              "www.tenable.com/plugins/nessus/35371"):
                 self.assertIn(expected, report)
+            self.assertNotIn("host-a", report)
             self.assertIn("not automatic decisions", report)
             cards = re.findall(r'<article class="finding">(.*?)</article>', report, re.S)
             self.assertEqual(len(cards), 2)
@@ -204,6 +242,7 @@ class CliReportTests(unittest.TestCase):
                     self.assertIn("limited additional attack value", report)
                     self.assertIn("amplification functionality", report)
                     self.assertIn("www.tenable.com/plugins/nessus/10884", report)
+                    self.assertNotIn("host-a", report)
 
                     previous = set(self.reports(base, "closure-review"))
                     result = self.run_cli(
