@@ -16,7 +16,9 @@ from nessus_organiser.cli import closure
 from nessus_organiser.cli import ssh
 from nessus_organiser.cli import tls
 from nessus_organiser.common.progress import load_scan, report_progress
-from nessus_organiser.reporting import report_path
+from nessus_organiser.reporting import (
+    AnalysisReport, generate_combined_report, print_report_summary, report_path,
+)
 
 
 def run(
@@ -42,44 +44,32 @@ def run(
 
     timestamp = datetime.now()
     plugin_findings = load_scan(nessus_file)
+    reports: list[AnalysisReport] = []
     with report_progress(transient=False, spinner=False) as progress:
-        task = progress.add_task("Generating TLS report...", total=4)
+        task = progress.add_task("Analysing TLS findings...", total=4)
         console = progress.console if progress.console.is_terminal else None
-        tls.run(
-            nessus_file=nessus_file,
-            output_file=report_path("tls-review", timestamp),
-            scope=scope,
-            plugin_findings=plugin_findings,
-            console=console,
-        )
+        report = tls.analyse(plugin_findings, scope)
+        if report:
+            reports.append(report)
         progress.update(
-            task, advance=1, description="Generating patch management report...", refresh=True
+            task, advance=1, description="Analysing patch management findings...", refresh=True
         )
-        patching.run(
-            nessus_file=nessus_file,
-            output_file=report_path("patch-management-review", timestamp),
-            scope=scope,
-            ithc=ithc,
-            plugin_findings=plugin_findings,
-            console=console,
-        )
-        progress.update(task, advance=1, description="Generating SSH report...", refresh=True)
-        ssh.run(
-            nessus_file=nessus_file,
-            output_file=report_path("ssh-review", timestamp),
-            scope=scope,
-            plugin_findings=plugin_findings,
-            console=console,
-        )
-        progress.update(task, advance=1, description="Generating closure review...", refresh=True)
-        closure.run(
-            nessus_file=nessus_file,
-            output_file=report_path("closure-review", timestamp),
-            scope=scope,
-            csacyber=csacyber,
-            plugin_findings=plugin_findings,
-            console=console,
-        )
+        report = patching.analyse(plugin_findings, scope, ithc)
+        if report:
+            reports.append(report)
+        progress.update(task, advance=1, description="Analysing SSH findings...", refresh=True)
+        report = ssh.analyse(plugin_findings, scope)
+        if report:
+            reports.append(report)
+        progress.update(task, advance=1, description="Analysing closure findings...", refresh=True)
+        report = closure.analyse(plugin_findings, scope, csacyber, console)
+        if report:
+            reports.append(report)
+        progress.update(task, description="Generating combined report...", refresh=True)
+        generated = generate_combined_report(reports, report_path("nessus-review", timestamp))
+        if generated is not None:
+            for report in reports:
+                print_report_summary(report, generated, console)
         if console is not None:
             console.print()
         progress.update(task, advance=1, description="Reports complete", refresh=True)

@@ -126,14 +126,14 @@ class CliReportTests(unittest.TestCase):
     def test_all_loads_scan_once_and_shares_findings(self) -> None:
         findings = []
         with patch.object(all_reports, "load_scan", return_value=findings) as load, \
-             patch.object(all_reports.tls, "run") as tls, \
-             patch.object(all_reports.patching, "run") as patching, \
-             patch.object(all_reports.ssh, "run") as ssh, \
-             patch.object(all_reports.closure, "run") as closure:
+             patch.object(all_reports.tls, "analyse", return_value=None) as tls, \
+             patch.object(all_reports.patching, "analyse", return_value=None) as patching, \
+             patch.object(all_reports.ssh, "analyse", return_value=None) as ssh, \
+             patch.object(all_reports.closure, "analyse", return_value=None) as closure:
             all_reports.run(Path("scan.nessus"), "internal")
         load.assert_called_once_with(Path("scan.nessus"))
         for command in (tls, patching, ssh, closure):
-            self.assertIs(command.call_args.kwargs["plugin_findings"], findings)
+            self.assertIs(command.call_args.args[0], findings)
 
     def reports(self, base: Path, name: str) -> list[Path]:
         return sorted((base / "nessus-organiser").glob(f"{name}-*.html"))
@@ -158,15 +158,30 @@ class CliReportTests(unittest.TestCase):
             (base / "scan.nessus").write_text(scan_xml(), encoding="utf-8")
             result = self.run_cli(directory, "all", "-S", "internal", "--ithc", "scan.nessus")
             self.assertEqual(result.returncode, 0, result.stderr)
-            for name in ("tls-review", "ssh-review", "patch-management-review", "closure-review"):
-                self.assertTrue(self.only_report(base, name).is_file(), name)
-            tls = self.only_report(base, "tls-review").read_text(encoding="utf-8")
+            output = self.only_report(base, "nessus-review")
+            self.assertEqual(list((base / "nessus-organiser").glob("*.html")), [output])
+            combined = output.read_text(encoding="utf-8")
+            for label in ("TLS/SSL", "Patch Management", "SSH", "Closure"):
+                self.assertIn(f">{label}</button>", combined)
+            ids = re.findall(r'(?<![\w-])id="([^"]+)"', combined)
+            self.assertEqual(len(ids), len(set(ids)))
+            self.assertIn('role="tablist" aria-label="Reports" hidden', combined)
+            for index in range(4):
+                self.assertIn(
+                    f'role="tabpanel" id="report-{index}-panel" '
+                    f'aria-labelledby="report-{index}-tab">', combined
+                )
+                self.assertIn(f'id="report-{index}-search" class="search"', combined)
+            self.assertIn(output.name, result.stdout)
+            panels = re.split(r'(?=<section class="report-content" role="tabpanel")', combined)
+            self.assertEqual(len(panels), 5)
+            tls, patching, ssh, report = panels[1:]
+            self.assertIn("Insecure SSH Cryptographic Configuration", ssh)
             tls_remediation = tls.split('<section class="panel"><h2>Remediation</h2>', 1)[1].split("</section>", 1)[0]
             self.assertIn("Strengthen TLS configurations across affected services", tls_remediation)
             self.assertIn("<h3>References</h3>", tls_remediation)
             self.assertIn('href="https://learn.microsoft.com/en-us/dotnet/core/extensions/sslstream-best-practices"', tls_remediation)
             self.assertNotIn('<section class="panel"><h2>References</h2>', tls)
-            report = self.only_report(base, "closure-review").read_text(encoding="utf-8")
             for expected in ("10114", "35371", "hostname.bind",
                              "Assessment scope: internal.",
                              "www.tenable.com/plugins/nessus/10114",
@@ -186,7 +201,6 @@ class CliReportTests(unittest.TestCase):
                 self.assertNotIn("Closure may be appropriate", " ".join(card.split()))
             self.assertNotIn('<section class="panel"><h2>References</h2>', report)
             self.assertNotIn("# Remediation", report)
-            patching = self.only_report(base, "patch-management-review").read_text(encoding="utf-8")
             self.assertIn("ITHC", patching)
             self.assertIn("csrc.nist.gov/pubs/sp/800/40/r4/final", patching)
             remediation = patching.split('<section class="panel"><h2>Remediation</h2>', 1)[1].split("</section>", 1)[0]
@@ -237,7 +251,9 @@ class CliReportTests(unittest.TestCase):
             (base / "scan.nessus").write_text(scan_xml(), encoding="utf-8")
             result = self.run_cli(directory, "all", "-S", "external", "scan.nessus")
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue(self.only_report(base, "tls-review").is_file())
+            report = self.only_report(base, "nessus-review").read_text(encoding="utf-8")
+            self.assertIn(">TLS/SSL</button>", report)
+            self.assertNotIn(">Closure</button>", report)
             self.assertEqual(self.reports(base, "closure-review"), [])
             self.assertIn("No closure rules are defined for external scope", result.stderr)
 
@@ -249,10 +265,11 @@ class CliReportTests(unittest.TestCase):
             )
             for command in ("closure", "all"):
                 with self.subTest(command=command):
-                    previous = set(self.reports(base, "closure-review"))
+                    report_name = "closure-review" if command == "closure" else "nessus-review"
+                    previous = set(self.reports(base, report_name))
                     result = self.run_cli(directory, command, "-S", "internal", "scan.nessus")
                     self.assertEqual(result.returncode, 0, result.stderr)
-                    created = set(self.reports(base, "closure-review")) - previous
+                    created = set(self.reports(base, report_name)) - previous
                     self.assertEqual(len(created), 1)
                     report = created.pop().read_text(encoding="utf-8")
                     self.assertIn('<span class="badge">Nessus 10884</span>', report)
@@ -263,12 +280,12 @@ class CliReportTests(unittest.TestCase):
                     self.assertNotIn("Closure may be appropriate", " ".join(report.split()))
                     self.assertNotIn("host-a", report)
 
-                    previous = set(self.reports(base, "closure-review"))
+                    previous = set(self.reports(base, report_name))
                     result = self.run_cli(
                         directory, command, "-S", "internal", "--csacyber", "scan.nessus"
                     )
                     self.assertEqual(result.returncode, 0, result.stderr)
-                    created = set(self.reports(base, "closure-review")) - previous
+                    created = set(self.reports(base, report_name)) - previous
                     self.assertEqual(len(created), 1)
                     report = created.pop().read_text(encoding="utf-8")
                     self.assertIn(
@@ -334,8 +351,11 @@ class CliReportTests(unittest.TestCase):
             old_report.write_text("existing", encoding="utf-8")
             result = self.run_cli(directory, "all", "-S", "internal", "scan.nessus")
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue(self.only_report(base, "tls-review").is_file())
-            self.assertTrue(self.only_report(base, "patch-management-review").is_file())
+            report = self.only_report(base, "nessus-review").read_text(encoding="utf-8")
+            self.assertIn(">TLS/SSL</button>", report)
+            self.assertIn(">Patch Management</button>", report)
+            self.assertNotIn(">SSH</button>", report)
+            self.assertNotIn(">Closure</button>", report)
             self.assertEqual(old_report.read_text(encoding="utf-8"), "existing")
             self.assertEqual(self.reports(base, "ssh-review"), [old_report])
             self.assertNotIn("SSH Analysis Summary", result.stdout)
@@ -352,7 +372,7 @@ class CliReportTests(unittest.TestCase):
                 '</ReportHost></Report></NessusClientData_v2>',
                 encoding="utf-8",
             )
-            for command in ("tls", "ssh", "patching"):
+            for command in ("tls", "ssh", "patching", "all"):
                 with self.subTest(command=command):
                     result = self.run_cli(
                         directory, command, "-S", "internal", "scan.nessus"
@@ -363,6 +383,38 @@ class CliReportTests(unittest.TestCase):
                     self.assertEqual(result.stdout, "")
                     self.assertEqual(result.stderr, "")
 
+    def test_all_with_only_closure_findings_has_one_tab(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            (base / "scan.nessus").write_text(
+                '<NessusClientData_v2><Report><ReportHost name="host-a">'
+                '<ReportItem pluginID="10884" pluginName="NTP" severity="0" '
+                'port="123" protocol="udp"/>'
+                '</ReportHost></Report></NessusClientData_v2>',
+                encoding="utf-8",
+            )
+            result = self.run_cli(directory, "all", "-S", "internal", "scan.nessus")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = self.only_report(base, "nessus-review").read_text(encoding="utf-8")
+            self.assertEqual(len(re.findall(r'<button type="button" role="tab"', report)), 1)
+            self.assertIn(">Closure</button>", report)
+            self.assertIn("Closure Review Summary", result.stdout)
+            self.assertNotIn("Analysis Summary", result.stdout)
+
+    def test_combined_summary_uses_collision_resolved_filename(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            scan = base / "scan.nessus"
+            scan.write_text(scan_xml(), encoding="utf-8")
+            output = base / "nessus-review.html"
+            output.write_text("existing", encoding="utf-8")
+            stdout = io.StringIO()
+            with redirect_stdout(stdout), patch.object(all_reports, "report_path", return_value=output):
+                all_reports.run(scan, "internal")
+            self.assertEqual(output.read_text(encoding="utf-8"), "existing")
+            self.assertTrue((base / "nessus-review-1.html").is_file())
+            self.assertEqual(stdout.getvalue().count("nessus-review-1.html"), 4)
+
     def test_runs_create_timestamped_reports_without_overwriting(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
@@ -371,7 +423,7 @@ class CliReportTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             output_dir = base / "nessus-organiser"
             initial = {path: path.read_bytes() for path in output_dir.glob("*.html")}
-            self.assertEqual(len(initial), 4)
+            self.assertEqual(len(initial), 1)
             timestamps = set()
             for path in initial:
                 match = re.search(r"-(\d{8}-\d{6})\.html$", path.name)
@@ -382,7 +434,7 @@ class CliReportTests(unittest.TestCase):
 
             second = self.run_cli(directory, "all", "-S", "internal", "scan.nessus")
             self.assertEqual(second.returncode, 0, second.stderr)
-            self.assertEqual(len(list(output_dir.glob("*.html"))), 8)
+            self.assertEqual(len(list(output_dir.glob("*.html"))), 2)
             for path, contents in initial.items():
                 self.assertEqual(path.read_bytes(), contents)
 

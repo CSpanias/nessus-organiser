@@ -75,8 +75,8 @@ def main() -> None:
     #---------------------------------------------------------------------------
     all_parser = subparsers.add_parser(
         "all",
-        help=("Generate all supported reports."),
-        description=("Generate all supported reports from a Nessus scan."),
+        help=("Generate a combined tabbed report."),
+        description=("Generate one tabbed HTML report from a Nessus scan."),
         formatter_class=CustomFormatter,
         epilog=dedent("""
         Example:

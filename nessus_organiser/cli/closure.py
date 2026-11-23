@@ -4,12 +4,11 @@ from pathlib import Path
 
 from rich.console import Console
 
-from nessus_organiser.common.tables import print_summary_table
 from nessus_organiser.common.progress import load_scan
 from nessus_organiser.content.loader import load_closure_content
 from nessus_organiser.findings.factory import build_finding
 from nessus_organiser.models.plugin import PluginFinding
-from nessus_organiser.reporting.html import generate_html
+from nessus_organiser.reporting import AnalysisReport, generate_analysis_report, print_report_summary
 
 
 def run(
@@ -17,6 +16,25 @@ def run(
     plugin_findings: list[PluginFinding] | None = None,
     console: Console | None = None,
 ) -> None:
+    if scope not in ("internal", "external"):
+        raise ValueError(f"Unknown assessment scope: {scope}")
+    if plugin_findings is None:
+        content = load_closure_content()
+        if not any(scope in definition for definition in content["plugins"].values()):
+            _report_not_generated(f"No closure rules are defined for {scope} scope.", console)
+            return
+        plugin_findings = load_scan(nessus_file)
+    report = analyse(plugin_findings, scope, csacyber, console)
+    if report is None:
+        return
+    generated = generate_analysis_report(report, output_file)
+    print_report_summary(report, generated, console)
+
+
+def analyse(
+    plugin_findings: list[PluginFinding], scope: str, csacyber: bool = False,
+    console: Console | None = None,
+) -> AnalysisReport | None:
     if scope not in ("internal", "external"):
         raise ValueError(f"Unknown assessment scope: {scope}")
     content = load_closure_content()
@@ -30,8 +48,6 @@ def run(
         return
 
     grouped: dict[str, list[PluginFinding]] = {plugin_id: [] for plugin_id in definitions}
-    if plugin_findings is None:
-        plugin_findings = load_scan(nessus_file)
     for plugin in plugin_findings:
         if plugin.plugin_id in grouped:
             grouped[plugin.plugin_id].append(plugin)
@@ -64,23 +80,17 @@ def run(
     if not findings:
         return
 
-    generated = generate_html(
+    return AnalysisReport(
+        label="Closure",
         findings=findings,
-        output_path=output_file,
         title=content["title"],
         introduction=f"Assessment scope: {scope}.\n\n{content['introduction']}",
         closure_review=True,
-    )
-    print()
-    print_summary_table(
-        title="Closure Review Summary",
-        console=console,
-        rows=[
+        summary_title="Closure Review Summary",
+        summary_rows=[
             ("Assessment Scope", scope),
             ("Matched Plugins", str(len(findings))),
             ("Affected Hosts", str(len({plugin.host for group in grouped.values() for plugin in group}))),
-            ("Output Directory", str(generated.parent)),
-            ("Output File", generated.name),
         ],
     )
 

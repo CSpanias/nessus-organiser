@@ -84,7 +84,7 @@ uv tool upgrade nessus-organiser
 - Copy report sections or the complete report as Markdown
 - Deduplicate references
 - Produce reusable reporting outputs
-- Generate multiple report types from a single Nessus scan
+- Generate one tabbed HTML report containing all applicable report types
 - Parse the input once when generating all report types
 
 ## Supported Plugin IDs
@@ -173,7 +173,7 @@ nessus-organiser patching -S internal internal.nessus
 # Generate an SSH Report
 nessus-organiser ssh -S internal internal.nessus
 
-# Generate all reports, including closure review when applicable
+# Generate one combined report, including closure review when applicable
 nessus-organiser all -S internal internal.nessus
 
 # Generate only a closure review
@@ -202,6 +202,10 @@ working directory. Filenames include the local date and time, for example
 reports, including if filenames collide. A report and its summary table are
 omitted without a message when there are no applicable findings. A message is
 shown when no closure rules are defined for the selected scope.
+
+The `all` command writes one `nessus-review-<timestamp>.html` with separate tabs
+for report types that have findings. Individual commands continue to write their
+own reports. Tabs, search and copy controls work offline.
 
 Each command accepts one complete `.nessus` XML export; concatenating files
 does not produce valid XML.

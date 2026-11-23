@@ -14,13 +14,12 @@ from nessus_organiser.common.counting import (
     count_categories,
     count_findings,
 )
-from nessus_organiser.common.tables import print_summary_table
 from nessus_organiser.common.progress import load_scan
 from nessus_organiser.content.loader import load_ssh_content
 from nessus_organiser.findings.factory import build_findings
 from nessus_organiser.organising.ssh import organise_ssh, build_evidence
 from nessus_organiser.models.plugin import PluginFinding
-from nessus_organiser.reporting import generate_report
+from nessus_organiser.reporting import AnalysisReport, generate_analysis_report, print_report_summary
 
 
 def run(
@@ -47,11 +46,17 @@ def run(
         None.
     """
 
-    excluded_plugins = 0
-
-    # Raw Nessus findings
     if plugin_findings is None:
         plugin_findings = load_scan(nessus_file)
+    report = analyse(plugin_findings, scope)
+    if report is None:
+        return
+    generated = generate_analysis_report(report, output_file)
+    print_report_summary(report, generated, console)
+
+
+def analyse(plugin_findings: list[PluginFinding], scope: str) -> AnalysisReport | None:
+    excluded_plugins = 0
 
     # Organised findings
     grouped_findings = organise_ssh(findings=plugin_findings)
@@ -97,30 +102,23 @@ def run(
         for category_findings in grouped_findings.values()
     )
 
-    generated = generate_report(
+    if not report_findings:
+        return None
+    return AnalysisReport(
+        label="SSH",
         findings=report_findings,
-        output_path=output_file,
         title=ssh_content["title"],
         introduction=ssh_content.get("introduction"),
         remediation_introduction=ssh_content.get(
             "remediation_introduction"
         ),
-    )
-    if generated is None:
-        return
-
-    print()
-    print_summary_table(
-        title="SSH Analysis Summary",
-        console=console,
-        rows=[
+        summary_title="SSH Analysis Summary",
+        summary_rows=[
             ("Parsed Plugins", f"{len(plugin_findings):,}"),
             ("Excluded Plugins", f"{excluded_plugins}"),
             ("Processed Plugins", f"{analysed_plugins:,}"),
             ("SSH Vulnerabilities", f"{ssh_vulnerability_count:,}"),
             ("Identified Categories", str(identified_categories)),
             ("Generated Findings", str(len(report_findings))),
-            ("Output Directory", str(generated.parent)),
-            ("Output File", generated.name),
         ],
     )

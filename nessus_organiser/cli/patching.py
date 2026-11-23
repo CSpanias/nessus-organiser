@@ -18,13 +18,12 @@ from nessus_organiser.common.counting import (
     count_analysed_plugins,
     count_unique_host_plugin_findings,
 )
-from nessus_organiser.common.tables import print_summary_table
 from nessus_organiser.common.progress import load_scan
 from nessus_organiser.content.loader import load_patch_management_content
 from nessus_organiser.findings.factory import build_findings
 from nessus_organiser.organising.patching import organise_patch_management
 from nessus_organiser.models.plugin import PluginFinding
-from nessus_organiser.reporting import generate_report
+from nessus_organiser.reporting import AnalysisReport, generate_analysis_report, print_report_summary
 
 def run(
     nessus_file: Path,
@@ -51,9 +50,18 @@ def run(
         None.
     """
 
-    # Raw Nessus findings
     if plugin_findings is None:
         plugin_findings = load_scan(nessus_file)
+    report = analyse(plugin_findings, scope, ithc)
+    if report is None:
+        return
+    generated = generate_analysis_report(report, output_file)
+    print_report_summary(report, generated, console)
+
+
+def analyse(
+    plugin_findings: list[PluginFinding], scope: str, ithc: bool = False,
+) -> AnalysisReport | None:
 
     # Organised findings
     organisation_result = organise_patch_management(findings=plugin_findings)
@@ -108,30 +116,20 @@ def run(
     ORDER = ("unsupported_software", "missing_security_patches")
     report_findings.sort(key=lambda f: ORDER.index(f.category))
 
-    # Generate report
-    generated = generate_report(
-            findings=report_findings,
-            statistics=statistics,
-            output_path=output_file,
-            title=patch_management_content["title"],
-            introduction=patch_management_content.get(
-                "introduction"
-            ),
-            remediation_introduction=patch_management_content.get(
-                "remediation_introduction"
-            ),
-            ithc=ithc,
-            grouped=True,
-            references_in_remediation=True,
-        )
-    if generated is None:
-        return
-
-    print()
-    print_summary_table(
-        title="Patch Management Analysis Summary",
-        console=console,
-        rows=[
+    if not report_findings:
+        return None
+    return AnalysisReport(
+        label="Patch Management",
+        findings=report_findings,
+        statistics=statistics,
+        title=patch_management_content["title"],
+        introduction=patch_management_content.get("introduction"),
+        remediation_introduction=patch_management_content.get("remediation_introduction"),
+        ithc=ithc,
+        grouped=True,
+        references_in_remediation=True,
+        summary_title="Patch Management Analysis Summary",
+        summary_rows=[
             ("Parsed Plugins", f"{len(plugin_findings):,}"),
             ("Excluded Plugins", str(organisation_result.excluded_findings)),
             ("Processed Plugins", f"{analysed_plugins:,}"),
@@ -139,7 +137,5 @@ def run(
             ("Legacy Vulnerabilities", f"{legacy_vulnerability_count:,}"),
             ("Identified Categories", str(identified_categories)),
             ("Generated Findings", str(len(report_findings))),
-            ("Output Directory", str(generated.parent)),
-            ("Output File", generated.name),
         ],
     )
