@@ -105,7 +105,6 @@ def run(
         remediation_introduction=ssh_content.get(
             "remediation_introduction"
         ),
-        console=console,
     )
     if generated is None:
         return

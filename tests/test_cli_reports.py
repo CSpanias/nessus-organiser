@@ -80,12 +80,16 @@ class CliReportTests(unittest.TestCase):
             rendered = output.getvalue()
             for title in (
                 "TLS Analysis Summary", "Patch Management Analysis Summary",
-                "No findings for Insecure SSH", "Closure Review Summary",
+                "Closure Review Summary",
             ):
                 with self.subTest(title=title):
                     self.assertRegex(
                         rendered, r"\r\x1b\[2K(?:\x1b\[[0-9;]*m)*\s*" + re.escape(title)
                     )
+            self.assertNotIn("No findings for Insecure SSH", rendered)
+            self.assertRegex(
+                rendered, r"\r\x1b\[2K\n[^\r\n]*\r\x1b\[2KReports complete"
+            )
             plain = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", rendered)
             self.assertRegex(plain, r"Reports complete[^\r\n]*100% 4/4")
 
@@ -210,7 +214,8 @@ class CliReportTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(old_report.read_text(encoding="utf-8"), "existing")
             self.assertEqual(self.reports(base, "closure-review"), [old_report])
-            self.assertIn("No closure-review plugins were found", result.stderr)
+            self.assertEqual(result.stdout, "")
+            self.assertEqual(result.stderr, "")
 
     def test_dns_only_is_reported_for_internal_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -334,7 +339,8 @@ class CliReportTests(unittest.TestCase):
             self.assertEqual(old_report.read_text(encoding="utf-8"), "existing")
             self.assertEqual(self.reports(base, "ssh-review"), [old_report])
             self.assertNotIn("SSH Analysis Summary", result.stdout)
-            self.assertIn("no report was generated", " ".join(result.stderr.split()))
+            self.assertNotIn("no report was generated", " ".join(result.stderr.split()))
+            self.assertNotIn("No findings for", result.stdout)
             self.assertEqual(self.reports(base, "closure-review"), [])
 
     def test_unmatched_individual_reports_are_not_written(self) -> None:
@@ -354,7 +360,8 @@ class CliReportTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 0, result.stderr)
                     self.assertFalse((base / "nessus-organiser").exists())
                     self.assertNotIn("Analysis Summary", result.stdout)
-                    self.assertIn("no report was generated", " ".join(result.stderr.split()))
+                    self.assertEqual(result.stdout, "")
+                    self.assertEqual(result.stderr, "")
 
     def test_runs_create_timestamped_reports_without_overwriting(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -8,6 +8,7 @@ from markdown_it import MarkdownIt
 from nessus_organiser.models.finding import Finding
 from nessus_organiser.reporting.markdown import (
     ReportSections,
+    _reflow_markdown,
     build_report_sections,
     escape_markdown_text,
     format_markdown,
@@ -31,42 +32,44 @@ def render_html(
     """Render a report without external assets or network access."""
     markdown = MarkdownIt("commonmark", {"html": False}).enable("table").disable("image")
     remediation = {finding.category: text for finding, text in sections.remediation}
-    if closure_review:
-        commentary_sections = []
-        for finding, commentary in sections.commentary:
-            solution = remediation.get(finding.category)
+    cards = []
+    for finding, commentary in ([] if grouped else sections.commentary):
+        label = "Closure Justification" if closure_review else "Technical Commentary"
+        solution = remediation.get(finding.category)
+        if closure_review:
+            evidence = _reflow_markdown(finding.commentary_evidence).strip()
+            justification = _reflow_markdown(finding.commentary).strip()
+            detail = f'<details open><summary>{label}</summary>'
+            if evidence:
+                detail += markdown.render(evidence)
+            if justification:
+                detail += (
+                    markdown.render(justification)
+                    + _copy_controls(justification, "closure justification")
+                )
             if solution:
-                commentary += "\n\n" + solution.partition("\n\n")[2]
+                detail += markdown.render(solution.partition("\n\n")[2])
             if finding.references:
                 references = "\n".join(
                     f"- [{reference}]({reference})"
                     for reference in sorted(set(finding.references))
                 )
-                commentary += "\n\n#### References\n\n" + references
-            commentary_sections.append((finding, commentary))
-        sections = sections._replace(
-            commentary=commentary_sections,
-            remediation=[],
-            references="",
-        )
-        remediation = {}
-    cards = []
-    for finding, commentary in ([] if grouped else sections.commentary):
-        label = "Closure Justification" if closure_review else "Technical Commentary"
-        detail = (
-            f'<details open><summary>{label}</summary>'
-            + _copy_controls(commentary.partition("\n\n")[2], label.lower())
-            + markdown.render(commentary.partition("\n\n")[2])
-            + "</details>"
-        )
-        solution = remediation.get(finding.category)
-        if solution:
-            detail += (
-                "<details><summary>Remediation</summary>"
-                + _copy_controls(solution.partition("\n\n")[2], "remediation")
-                + markdown.render(solution.partition("\n\n")[2])
+                detail += markdown.render("#### References\n\n" + references)
+            detail += "</details>"
+        else:
+            detail = (
+                f'<details open><summary>{label}</summary>'
+                + _copy_controls(commentary.partition("\n\n")[2], label.lower())
+                + markdown.render(commentary.partition("\n\n")[2])
                 + "</details>"
             )
+            if solution:
+                detail += (
+                    "<details><summary>Remediation</summary>"
+                    + _copy_controls(solution.partition("\n\n")[2], "remediation")
+                    + markdown.render(solution.partition("\n\n")[2])
+                    + "</details>"
+                )
         alternate_id = (
             f'<span class="badge">{escape(finding.alternate_id)}</span>'
             if finding.alternate_id else ""
@@ -92,7 +95,7 @@ def render_html(
         + _copy_controls(sections.references, "references")
         + markdown.render(sections.references)
         + "</section>"
-        if sections.references else ""
+        if sections.references and not closure_review else ""
     )
     title = escape(sections.title)
     findings_content = "\n".join(cards) or '<p class="empty">No findings were generated.</p>'
@@ -122,24 +125,30 @@ def render_html(
                 + markdown.render(sections.references)
                 + "</div>"
             )
-        severity_items = [
-            (
-                finding,
-                f"### {escape_markdown_text(finding.title)}\n\n"
-                + (
-                    " ".join(sorted(
-                        {plugin.plugin_id for plugin in finding.affected_plugins},
-                        key=int,
-                    )) + "\n\n"
-                    if finding.affected_plugins else ""
-                )
-                + f"**Severity:** {escape_markdown_text(finding.severity)}"
-                + (f"\n\n{finding.severity_justification.strip()}"
-                   if finding.severity_justification else ""),
+        severity_items = []
+        severity_cards = []
+        for finding, _ in (sections.commentary if show_severity else []):
+            heading = f"### {escape_markdown_text(finding.title)}"
+            ids = " ".join(sorted(
+                {plugin.plugin_id for plugin in finding.affected_plugins}, key=int
+            ))
+            rating = f"**Severity:** {escape_markdown_text(finding.severity)}"
+            justification = _reflow_markdown(finding.severity_justification).strip()
+            severity_items.append("\n\n".join(
+                part for part in (heading, ids, rating, justification) if part
+            ))
+            severity_cards.append(
+                f'<article class="finding" data-group="{escape(finding.category, quote=True)}">'
+                + markdown.render(heading)
+                + (markdown.render(ids) + _copy_controls(ids, f"plugin IDs for {finding.title}")
+                   if ids else "")
+                + markdown.render(rating)
+                + (markdown.render(justification)
+                   + _copy_controls(justification, f"severity justification for {finding.title}")
+                   if justification else "")
+                + "</article>"
             )
-            for finding, _ in sections.commentary if show_severity
-        ]
-        severity_text = "\n\n".join(text for _, text in severity_items)
+        severity_text = "\n\n".join(severity_items)
         report_parts = [
             f"# {sections.title}", f"## Finding\n\n{finding_text}",
             f"## Remediation\n\n{remediation_text}",
@@ -171,8 +180,7 @@ def render_html(
         if show_severity:
             content += (
                 '<section class="panel"><h2>Severity</h2>'
-                + _copy_controls(severity_text, "severity")
-                + grouped_cards(severity_items) + "</section>"
+                + "\n".join(severity_cards) + "</section>"
             )
         if not references_in_remediation:
             content += references

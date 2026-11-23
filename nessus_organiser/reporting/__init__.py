@@ -3,8 +3,6 @@
 from datetime import datetime
 from pathlib import Path
 
-from rich.console import Console
-
 from nessus_organiser.models.finding import Finding
 from nessus_organiser.reporting.html import generate_html
 
@@ -25,14 +23,10 @@ def generate_report(
     grouped: bool = False,
     show_severity: bool = False,
     references_in_remediation: bool = False,
-    console: Console | None = None,
 ) -> Path | None:
     if output_path.suffix.lower() != ".html":
         raise ValueError("Report output must have a .html extension.")
     if not findings:
-        (console or Console(stderr=True)).print(
-            f"No findings for {title}; no report was generated.", markup=False
-        )
         return None
     return generate_html(
         findings=findings,

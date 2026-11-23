@@ -12,10 +12,10 @@ from nessus_organiser.models.plugin import PluginFinding
 from nessus_organiser.parsing.nessus import load_nessus
 
 
-def report_progress(*, transient: bool = True) -> Progress:
+def report_progress(*, transient: bool = True, spinner: bool = True) -> Progress:
     console = Console()
     return Progress(
-        SpinnerColumn(),
+        *((SpinnerColumn(),) if spinner else ()),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TaskProgressColumn(),

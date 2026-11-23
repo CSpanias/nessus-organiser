@@ -5,8 +5,8 @@ from html import unescape
 from pathlib import Path
 
 from nessus_organiser.analysis.tls import analyse_tls_finding
-from nessus_organiser.content.loader import load_patch_management_content, load_tls_content
-from nessus_organiser.findings.factory import build_findings
+from nessus_organiser.content.loader import load_closure_content, load_patch_management_content, load_tls_content
+from nessus_organiser.findings.factory import build_finding, build_findings
 from nessus_organiser.models.plugin import PluginFinding
 from nessus_organiser.organising.tls import build_evidence, organise_tls
 from nessus_organiser.reporting import generate_report
@@ -105,6 +105,11 @@ class HtmlReportTests(unittest.TestCase):
                     "does not necessarily imply immediate exploitability" in " ".join(report.split()),
                     scope == "internal",
                 )
+                copies = copy_payloads(report)
+                self.assertEqual(
+                    f"severity justification for {finding.title}" in copies,
+                    scope == "internal",
+                )
 
     def test_tls_remediation_copy_includes_nested_references(self) -> None:
         content = load_tls_content()
@@ -151,9 +156,25 @@ class HtmlReportTests(unittest.TestCase):
         severity = report.split('<section class="panel"><h2>Severity</h2>', 1)[1].split("</section>", 1)[0]
         self.assertIn("<p>104743 157288</p>", severity)
         self.assertIn("<p>53360</p>", severity)
-        copied = copy_payloads(report)["severity"]
-        self.assertRegex(copied, r"### Deprecated TLS.*\n\n104743 157288\n\n\*\*Severity:")
-        self.assertIn("### Weak Diffie\\-Hellman Key Validation\n\n53360\n\n", copied)
+        cards = re.findall(r'<article class="finding".*?</article>', severity, re.S)
+        self.assertEqual(len(cards), 2)
+        tls_copies = copy_payloads(cards[0])
+        self.assertEqual(
+            tls_copies["plugin IDs for Deprecated TLS 1.0 and TLS 1.1 Protocol Support"],
+            "104743 157288",
+        )
+        self.assertEqual(
+            tls_copies["severity justification for Deprecated TLS 1.0 and TLS 1.1 Protocol Support"],
+            "Support for TLS 1.0 or TLS 1.1 does not necessarily imply immediate "
+            "exploitability, as modern clients typically negotiate TLS 1.2 or "
+            "TLS 1.3 where available. No practical impact was demonstrated during "
+            "the assessment.",
+        )
+        dh_copies = copy_payloads(cards[1])
+        self.assertEqual(dh_copies["plugin IDs for Weak Diffie-Hellman Key Validation"], "53360")
+        self.assertNotIn("**Severity:**", dh_copies["severity justification for Weak Diffie-Hellman Key Validation"])
+        self.assertNotIn('aria-label="Copy severity Markdown"', severity)
+        self.assertIn("\n\n104743 157288\n\n**Severity:**", copy_payloads(report)["report"])
 
     def test_section_copies_omit_section_headings_but_keep_nested_titles(self) -> None:
         content = load_tls_content()
@@ -163,11 +184,11 @@ class HtmlReportTests(unittest.TestCase):
         finding = analyse_tls_finding(findings[0], "internal", content)
         sections = build_report_sections([finding], content["title"], "Introduction.")
         copies = copy_payloads(render_html(sections, grouped=True, show_severity=True))
-        for label in ("finding", "remediation", "severity", "references"):
+        for label in ("finding", "remediation", "references"):
             self.assertFalse(copies[label].startswith(("# Finding", "## Finding", "# Remediation", "## Remediation", "# Severity", "## Severity", "# References", "## References")))
         for label in ("finding", "remediation"):
             self.assertIn("### Deprecated TLS 1.0 Protocol Support", copies[label])
-        self.assertIn("### Deprecated TLS 1\\.0 Protocol Support", copies["severity"])
+        self.assertNotIn("severity", copies)
         self.assertIn("## Finding", copies["report"])
         self.assertIn("## Remediation", copies["report"])
         self.assertIn("## Severity", copies["report"])
@@ -185,7 +206,30 @@ class HtmlReportTests(unittest.TestCase):
         closure = copy_payloads(render_html(sections, closure_review=True))
         self.assertNotIn("report", closure)
         self.assertFalse(closure["closure justification"].startswith("#"))
-        self.assertIn("#### References", closure["closure justification"])
+        self.assertNotIn("#### References", closure["closure justification"])
+
+    def test_closure_copy_contains_only_justification_text(self) -> None:
+        definition = load_closure_content()["plugins"]["10884"]
+        finding = build_finding(
+            "10884", [plugin("10884", "NTP")],
+            {"id": "Nessus 10884", "title": definition["title"], "severity": "Review",
+             **definition["internal"]},
+        )
+        finding.commentary_evidence = "Nessus plugin 10884 was identified on 1 unique host."
+        report = render_html(
+            build_report_sections([finding], "Closure"), closure_review=True
+        )
+        copied = copy_payloads(report)["closure justification"]
+        self.assertEqual(
+            copied,
+            "An NTP service on the internal network offers limited additional "
+            "attack value and, by itself, does not demonstrate a path to "
+            "compromise. The finding is therefore closed.",
+        )
+        self.assertNotIn("Nessus plugin 10884 was identified", copied)
+        self.assertNotIn("References", copied)
+        self.assertIn("<h4>References</h4>", report)
+        self.assertIn('href="https://www.tenable.com/plugins/nessus/10884"', report)
 
     def test_patching_grouped_layout_has_no_severity_section(self) -> None:
         content = load_patch_management_content()

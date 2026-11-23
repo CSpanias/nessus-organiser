@@ -42,7 +42,7 @@ def run(
 
     timestamp = datetime.now()
     plugin_findings = load_scan(nessus_file)
-    with report_progress(transient=False) as progress:
+    with report_progress(transient=False, spinner=False) as progress:
         task = progress.add_task("Generating TLS report...", total=4)
         console = progress.console if progress.console.is_terminal else None
         tls.run(
@@ -80,4 +80,6 @@ def run(
             plugin_findings=plugin_findings,
             console=console,
         )
+        if console is not None:
+            console.print()
         progress.update(task, advance=1, description="Reports complete", refresh=True)

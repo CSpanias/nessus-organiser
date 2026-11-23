@@ -49,6 +49,7 @@ uv tool upgrade nessus-organiser
 - Consolidate related findings into root-cause observations
 - Group findings, remediation and severity guidance into copyable sections
 - List the associated Nessus plugin IDs under each severity heading
+- Copy each severity finding's plugin IDs or justification separately
 - Include TLS references in the remediation section
 - Include severity justifications for internal assessments
 - Preserve plugin 51893's scanner severity for external assessments when it is
@@ -72,6 +73,7 @@ uv tool upgrade nessus-organiser
 - Suggest internal-scope closure justifications for selected Nessus plugin IDs
 - Keep closure decisions subject to manual risk and policy review
 - Include each plugin's references alongside its closure justification
+- Copy each closure justification without its evidence or references
 - Currently recognise plugins 10114 (ICMP Timestamp Request Remote Date
   Disclosure), 10884 (NTP Server Detection), and 35371 (DNS hostname.bind
   hostname disclosure) for internal assessments only
@@ -198,7 +200,8 @@ Reports are created in a `nessus-organiser` directory under the current
 working directory. Filenames include the local date and time, for example
 `tls-review-20261123-215356.html`. Runs never overwrite existing
 reports, including if filenames collide. A report and its summary table are
-omitted when there are no applicable findings; a message explains the omission.
+omitted without a message when there are no applicable findings. A message is
+shown when no closure rules are defined for the selected scope.
 
 Each command accepts one complete `.nessus` XML export; concatenating files
 does not produce valid XML.

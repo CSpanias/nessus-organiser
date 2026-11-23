@@ -62,7 +62,6 @@ def run(
         findings.append(finding)
 
     if not findings:
-        _report_not_generated("No closure-review plugins were found.", console)
         return
 
     generated = generate_html(

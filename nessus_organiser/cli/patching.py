@@ -123,7 +123,6 @@ def run(
             ithc=ithc,
             grouped=True,
             references_in_remediation=True,
-            console=console,
         )
     if generated is None:
         return
