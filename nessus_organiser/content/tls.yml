@@ -23,6 +23,14 @@ deprecated_ssl_support:
     internal : Informational
     external : Low
 
+  severity_justification:
+    internal: |
+      Legacy SSL protocols can expose services to attacks such as POODLE or
+      DROWN, depending on the versions enabled. Modern clients rarely use
+      these protocols and exploitation requires additional conditions; an
+      Informational rating may be appropriate where no practical attack path
+      has been demonstrated.
+
   commentary: |
     The service supported one or more legacy SSL protocols which contain
     well-established cryptographic weaknesses and are no longer considered
@@ -80,6 +88,12 @@ deprecated_tls_support:
     internal : Informational
     external : Low
 
+  severity_justification:
+    internal: |
+      Support for TLS 1.0 or TLS 1.1 does not necessarily imply immediate
+      exploitability, as modern clients typically negotiate TLS 1.2 or
+      TLS 1.3 where available.
+
   commentary: |
     The service supported one or more deprecated TLS protocol versions that are
     no longer aligned with modern cryptographic standards. These protocol
@@ -123,6 +137,13 @@ weak_cipher_suites:
 
     internal : Informational
     external : Low
+
+  severity_justification:
+    internal: |
+      Modern clients generally prioritise stronger alternatives, while
+      exploitation depends on adversary-in-the-middle positioning and
+      negotiation of weaker algorithms. An Informational rating may be
+      appropriate where no practical impact has been demonstrated.
 
   commentary: |
     The service supported one or more weak or deprecated SSL/TLS cipher suites
@@ -188,6 +209,12 @@ weak_dh_parameters:
     internal : Informational
     external : Low
 
+  severity_justification:
+    internal: |
+      Weak Diffie-Hellman parameters introduce a weakness in TLS key exchange,
+      but successful exploitation requires adversary-in-the-middle positioning,
+      suitable cryptographic conditions and significant computational resources.
+
   commentary: |
     The service supported weak Diffie-Hellman (DH) key exchange parameters
     with a modulus size of 1024 bits or less. Such parameters no longer meet
@@ -226,6 +253,27 @@ weak_dh_parameters:
     - https://docs.microsoft.com/en-us/security-updates/securitybulletins/2015/ms15-055
     - https://weakdh.org/sysadmin.html
 
+weak_dh_key_validation:
+  id: TLS-009
+  title: Weak Diffie-Hellman Key Validation
+  severity:
+    internal: Informational
+    external: Low
+  severity_justification:
+    internal: |
+      Exploitation requires interception or manipulation of network traffic
+      and additional client-side weaknesses; the issue does not directly
+      result in system compromise.
+  commentary: |
+    The service accepted a weak Diffie-Hellman public value during TLS key
+    exchange. This may assist an adversary-in-the-middle attack where a
+    connecting client also has implementation weaknesses.
+  solution: |
+    Review the TLS implementation and update affected software or libraries
+    to vendor-supported versions that reject invalid Diffie-Hellman values.
+  references:
+    - https://www.tenable.com/plugins/nessus/53360
+
 weak_certificate_cryptography:
 
   id: TLS-005
@@ -236,6 +284,13 @@ weak_certificate_cryptography:
 
     internal : Informational
     external : Low
+
+  severity_justification:
+    internal: |
+      Deprecated certificate algorithms or key lengths primarily indicate a
+      cryptographic hardening issue. Exploitation may require significant
+      computational resources; an Informational rating may be appropriate
+      where no realistic compromise scenario has been identified.
 
   commentary: |
     The TLS certificate chain presented by the service utilised cryptographic
@@ -292,6 +347,11 @@ anonymous_cipher_suites:
     internal : Informational
     external : Low
 
+  severity_justification:
+    internal: |
+      This cryptographic misconfiguration weakens TLS assurances but does not
+      provide a direct compromise path in typical internal environments.
+
   commentary: |
     The service supported anonymous SSL/TLS cipher suites (aNULL). These
     cipher suites provide encryption but do not perform server authentication,
@@ -334,6 +394,12 @@ invalid_certificate_configuration:
     internal: Informational
     external: Low
 
+  severity_justification:
+    internal: |
+      Internal certificate trust issues often arise from operational or PKI
+      management shortcomings. Exploitation generally requires
+      adversary-in-the-middle positioning and abuse of client trust behaviour.
+
   commentary: null
 
   solution: |
@@ -363,6 +429,11 @@ tls_insecure_renegotiation:
     internal: Informational
     external: Low
 
+  severity_justification:
+    internal: |
+      Exploitation of insecure renegotiation generally requires
+      adversary-in-the-middle positioning and suitable application behaviour.
+
   commentary: |
     Testing also identified support for insecure TLS renegotiation behaviour 
     associated with CVE-2009-3555. Whilst successful exploitation generally 
@@ -376,6 +447,23 @@ tls_insecure_renegotiation:
 
   references:
     - https://nvd.nist.gov/vuln/detail/CVE-2009-3555
+
+tls_session_resumption:
+  title: Weak Cipher Suite Enforcement During Session Resumption
+  severity_justification:
+    internal: |
+      Exploitation of session resumption requires interception and
+      manipulation of traffic and depends on implementation and client
+      behaviour.
+  commentary: |
+    The service allowed a disabled cipher to be used when resuming an SSL/TLS
+    session. An attacker able to intercept and manipulate traffic may be able
+    to influence the cipher used for a resumed connection.
+  solution: |
+    Update the affected TLS implementation and verify that disabled cipher
+    suites cannot be used during session resumption.
+  references:
+    - https://www.tenable.com/plugins/nessus/51893
 
 certificate_issues:
 

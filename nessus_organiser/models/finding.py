@@ -20,6 +20,9 @@ class Finding:
         id:
             Unique finding identifier.
 
+        alternate_id:
+            Optional identifier used by an external reporting platform.
+
         title:
             Finding title.
 
@@ -66,3 +69,5 @@ class Finding:
     commentary: str | None = None
     commentary_evidence: str | None = None
     solution: str | None = None
+    alternate_id: str | None = None
+    severity_justification: str | None = None

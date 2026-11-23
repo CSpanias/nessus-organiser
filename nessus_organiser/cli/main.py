@@ -18,15 +18,9 @@ from nessus_organiser.cli.patching import run as run_patching
 from nessus_organiser.cli.plugins import run as run_plugins
 from nessus_organiser.cli.ssh import run as run_ssh
 from nessus_organiser.cli.tls import run as run_tls
+from nessus_organiser.reporting import report_path
 
 _SUPPORTED_COMMANDS = ("all", "tls", "patching", "ssh", "closure")
-
-
-def _html_path(value: str) -> Path:
-    path = Path(value)
-    if path.suffix.lower() != ".html":
-        raise argparse.ArgumentTypeError("output must end in .html")
-    return path
 
 
 def _detect_module(argv: list[str]) -> str | None:
@@ -136,14 +130,6 @@ def main() -> None:
     )
 
     tls_parser.add_argument(
-        "-o",
-        "--output",
-        type=_html_path,
-        default=Path("tls-review.html"),
-        help="Output HTML report.",
-    )
-
-    tls_parser.add_argument(
         "-S",
         "--scope",
         choices=["internal", "external"],
@@ -173,14 +159,6 @@ def main() -> None:
         "nessus_file",
         type=Path,
         help=("Path to the Nessus (.nessus) file to analyse."),
-    )
-
-    patching_parser.add_argument(
-        "-o",
-        "--output",
-        type=_html_path,
-        default=Path("patch-management-review.html"),
-        help="Output HTML report.",
     )
 
     patching_parser.add_argument(
@@ -222,14 +200,6 @@ def main() -> None:
     )
 
     ssh_parser.add_argument(
-        "-o",
-        "--output",
-        type=_html_path,
-        default=Path("ssh-review.html"),
-        help="Output HTML report.",
-    )
-
-    ssh_parser.add_argument(
         "-S",
         "--scope",
         choices=["internal", "external"],
@@ -247,10 +217,6 @@ def main() -> None:
     closure_parser.add_argument(
         "-S", "--scope", choices=["internal", "external"], required=True,
         help="Assessment scope.",
-    )
-    closure_parser.add_argument(
-        "-o", "--output", type=_html_path, default=Path("closure-review.html"),
-        help="Output HTML report.",
     )
     closure_parser.add_argument("--csacyber", action="store_true", help=argparse.SUPPRESS)
 
@@ -279,14 +245,14 @@ def main() -> None:
         case "tls":
             run_tls(
                 nessus_file=args.nessus_file,
-                output_file=args.output,
+                output_file=report_path("tls-review"),
                 scope=args.scope,
             )
 
         case "patching":
             run_patching(
                 nessus_file=args.nessus_file,
-                output_file=args.output,
+                output_file=report_path("patch-management-review"),
                 scope=args.scope,
                 ithc=args.ithc,
             )
@@ -294,14 +260,14 @@ def main() -> None:
         case "ssh":
             run_ssh(
                 nessus_file=args.nessus_file,
-                output_file=args.output,
+                output_file=report_path("ssh-review"),
                 scope=args.scope,
             )
 
         case "closure":
             run_closure(
                 nessus_file=args.nessus_file,
-                output_file=args.output,
+                output_file=report_path("closure-review"),
                 scope=args.scope,
                 csacyber=args.csacyber,
             )

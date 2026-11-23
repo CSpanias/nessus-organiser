@@ -36,6 +36,7 @@ uv tool upgrade nessus-organiser
 ### Nessus Processing
 
 - Parse Nessus (`.nessus`) files directly
+- Show scan parsing and report-generation progress in interactive terminals
 - Extract host, service, plugin, CVSS, and reference information
 - Deduplicate findings where appropriate
 - Generate reporting statistics automatically
@@ -46,12 +47,18 @@ uv tool upgrade nessus-organiser
 
 - Identify TLS-related vulnerabilities
 - Consolidate related findings into root-cause observations
+- Group findings, remediation and severity guidance into copyable sections
+- Include reviewable severity-justification templates for internal assessments;
+  verify the assessment context and any manual testing before using them
+- Preserve plugin 51893's scanner severity for external assessments when it is
+  higher than the existing weak-cipher group rating
 
 ### Patch Management Reviews
 
 - Identify missing security updates
 - Identify unsupported and end-of-life software
 - Calculate vulnerability statistics
+- Group findings and remediation into copyable sections
 
 ### SSH Reviews
 
@@ -62,6 +69,7 @@ uv tool upgrade nessus-organiser
 
 - Suggest internal-scope closure justifications for selected Nessus plugin IDs
 - Keep closure decisions subject to manual risk and policy review
+- Include each plugin's references alongside its closure justification
 - Currently recognise plugins 10114 (ICMP Timestamp Request Remote Date
   Disclosure), 10884 (NTP Server Detection), and 35371 (DNS hostname.bind
   hostname disclosure) for internal assessments only
@@ -73,6 +81,7 @@ uv tool upgrade nessus-organiser
 - Deduplicate references
 - Produce reusable reporting outputs
 - Generate multiple report types from a single Nessus scan
+- Parse the input once when generating all report types
 
 ## Supported Plugin IDs
 
@@ -98,10 +107,11 @@ are matched or excluded explicitly rather than an exhaustive list.
 |----------|------------|
 | Deprecated SSL Support | 20007, 78447, 78479, 89058 |
 | Deprecated TLS Support | 104743, 157288, 42880 |
-| Weak Cipher Suites | 26928, 65821, 42873, 81606 |
+| Weak Cipher Suites | 26928, 65821, 42873, 81606, 51893 |
 | Invalid Certificate Configuration | 51192, 57582, 45410, 45411, 15901, 56284 |
 | Weak Certificate Cryptography | 35291, 69551, 60108, 86067 |
-| Weak Diffie-Hellman Parameters | 83875, 53360 |
+| Weak Diffie-Hellman Parameters | 83875 |
+| Weak Diffie-Hellman Key Validation | 53360 |
 | Anonymous Cipher Suites | 31705 |
 
 ### Patch Management Reviews
@@ -182,14 +192,11 @@ manual review, not automatic changes to findings. Plugins 10114, 10884 and
 generated for them. A closure report is created only when a rule applies to the
 selected scope and at least one matching plugin is found.
 
-By default, `all` writes `tls-review.html`, `patch-management-review.html`,
-`ssh-review.html`, and `closure-review.html` in the current directory when
-their respective findings are present. Individual commands accept an HTML
-output path via `-o`.
+Reports are created in a `nessus-organiser` directory under the current
+working directory. Filenames include the local date and time, for example
+`tls-review-20261123-215356.html`. Runs never overwrite existing
+reports, including if filenames collide. A report and its summary table are
+omitted when there are no applicable findings; a message explains the omission.
 
-Runs overwrite reports with the same names. If a report is not generated
-because there are no applicable findings, an existing report is left untouched
-and a warning is displayed. Use separate directories or output paths for
-different scans.
 Each command accepts one complete `.nessus` XML export; concatenating files
 does not produce valid XML.

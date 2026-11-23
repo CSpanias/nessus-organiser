@@ -9,6 +9,7 @@ from nessus_organiser.models.finding import Finding
 from nessus_organiser.reporting.markdown import (
     ReportSections,
     build_report_sections,
+    escape_markdown_text,
     format_markdown,
 )
 
@@ -22,15 +23,38 @@ def _copy_controls(markdown: str, label: str) -> str:
     )
 
 
-def render_html(sections: ReportSections) -> str:
+def render_html(
+    sections: ReportSections, *, closure_review: bool = False,
+    grouped: bool = False, show_severity: bool = False,
+) -> str:
     """Render a report without external assets or network access."""
     markdown = MarkdownIt("commonmark", {"html": False}).enable("table").disable("image")
     remediation = {finding.category: text for finding, text in sections.remediation}
+    if closure_review:
+        commentary_sections = []
+        for finding, commentary in sections.commentary:
+            solution = remediation.get(finding.category)
+            if solution:
+                commentary += "\n\n" + solution.partition("\n\n")[2]
+            if finding.references:
+                references = "\n".join(
+                    f"- [{reference}]({reference})"
+                    for reference in sorted(set(finding.references))
+                )
+                commentary += "\n\n#### References\n\n" + references
+            commentary_sections.append((finding, commentary))
+        sections = sections._replace(
+            commentary=commentary_sections,
+            remediation=[],
+            references="",
+        )
+        remediation = {}
     cards = []
-    for finding, commentary in sections.commentary:
+    for finding, commentary in ([] if grouped else sections.commentary):
+        label = "Closure Justification" if closure_review else "Technical Commentary"
         detail = (
-            '<details open><summary>Technical Commentary</summary>'
-            + _copy_controls(commentary, "commentary")
+            f'<details open><summary>{label}</summary>'
+            + _copy_controls(commentary.partition("\n\n")[2], label.lower())
             + markdown.render(commentary.partition("\n\n")[2])
             + "</details>"
         )
@@ -38,15 +62,20 @@ def render_html(sections: ReportSections) -> str:
         if solution:
             detail += (
                 "<details><summary>Remediation</summary>"
-                + _copy_controls(solution, "remediation")
+                + _copy_controls(solution.partition("\n\n")[2], "remediation")
                 + markdown.render(solution.partition("\n\n")[2])
                 + "</details>"
             )
+        alternate_id = (
+            f'<span class="badge">{escape(finding.alternate_id)}</span>'
+            if finding.alternate_id else ""
+        )
         cards.append(
             '<article class="finding">'
             f"<h3>{escape(finding.title)}</h3>"
             f'<span class="badge">{escape(finding.id)}</span>'
-            f'<span class="badge">{escape(finding.severity)}</span>'
+            + alternate_id
+            + f'<span class="badge">{escape(finding.severity)}</span>'
             + detail + "</article>"
         )
 
@@ -59,14 +88,95 @@ def render_html(sections: ReportSections) -> str:
     )
     references = (
         '<section class="panel"><h2>References</h2>'
-        + _copy_controls("# References\n\n" + sections.references, "references")
+        + _copy_controls(sections.references, "references")
         + markdown.render(sections.references)
         + "</section>"
         if sections.references else ""
     )
     title = escape(sections.title)
     findings_content = "\n".join(cards) or '<p class="empty">No findings were generated.</p>'
-    finding_word = "finding" if len(cards) == 1 else "findings"
+    finding_count = len(sections.commentary)
+    finding_word = "finding" if finding_count == 1 else "findings"
+    search_controls = f"""
+      <label for="search">Search findings</label>
+      <input id="search" type="search" placeholder="Search findings">
+      <p id="count" aria-live="polite">{finding_count} {finding_word}</p>
+      <p id="no-matches" hidden>No findings match the search.</p>
+    """
+    if grouped:
+        finding_text = "\n\n".join(
+            ([sections.overview] if sections.overview else [])
+            + [text for _, text in sections.commentary]
+        )
+        remediation_text = "\n\n".join(
+            ([sections.remediation_introduction] if sections.remediation_introduction else [])
+            + [text for _, text in sections.remediation]
+        )
+        notice = (
+            "Severity justifications are review templates. Verify the assessment "
+            "context and any manual testing before using them."
+        )
+        severity_items = [
+            (
+                finding,
+                f"### {escape_markdown_text(finding.title)}\n\n"
+                f"**Severity:** {escape_markdown_text(finding.severity)}"
+                + (f"\n\n{finding.severity_justification.strip()}"
+                   if finding.severity_justification else ""),
+            )
+            for finding, _ in sections.commentary if show_severity
+        ]
+        severity_text = "\n\n".join(
+            ([notice] if any(f.severity_justification for f, _ in severity_items) else [])
+            + [text for _, text in severity_items]
+        )
+        report_parts = [
+            f"# {sections.title}", f"## Finding\n\n{finding_text}",
+            f"## Remediation\n\n{remediation_text}",
+        ]
+        if show_severity:
+            report_parts.append(f"## Severity\n\n{severity_text}")
+        if sections.references:
+            report_parts.append(f"## References\n\n{sections.references}")
+
+        def grouped_cards(items: list[tuple[Finding, str]]) -> str:
+            return "\n".join(
+                f'<article class="finding" data-group="{escape(finding.category, quote=True)}">'
+                f"{markdown.render(text)}</article>"
+                for finding, text in items
+            )
+
+        content = (
+            _copy_controls("\n\n".join(report_parts), "report")
+            + search_controls
+            + '<section class="panel"><h2>Finding</h2>'
+            + _copy_controls(finding_text, "finding")
+            + overview + grouped_cards(sections.commentary) + "</section>"
+            + '<section class="panel"><h2>Remediation</h2>'
+            + _copy_controls(remediation_text, "remediation")
+            + (markdown.render(sections.remediation_introduction)
+               if sections.remediation_introduction else "")
+            + grouped_cards(sections.remediation) + "</section>"
+        )
+        if show_severity:
+            content += (
+                '<section class="panel"><h2>Severity</h2>'
+                + _copy_controls(severity_text, "severity")
+                + (markdown.render(notice)
+                   if any(f.severity_justification for f, _ in severity_items) else "")
+                + grouped_cards(severity_items) + "</section>"
+            )
+        content += references
+    else:
+        content = (
+            '<section class="panel"><h2>Report Overview</h2>'
+            + _copy_controls(format_markdown(sections), "report") + overview
+            + "</section>" + remediation_intro
+            + '<section aria-labelledby="findings-heading">'
+            + '<h2 id="findings-heading">Findings</h2>' + search_controls
+            + f'<div id="findings">{findings_content}</div></section>'
+            + references
+        )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -102,20 +212,7 @@ def render_html(sections: ReportSections) -> str:
 <body>
   <header><h1>{title}</h1><p>Local assessment report</p></header>
   <main>
-    <section class="panel"><h2>Report Overview</h2>
-      {_copy_controls(format_markdown(sections), "report")}
-      {overview}
-    </section>
-    {remediation_intro}
-    <section aria-labelledby="findings-heading">
-      <h2 id="findings-heading">Findings</h2>
-      <label for="search">Search findings</label>
-      <input id="search" type="search" placeholder="Search findings">
-      <p id="count" aria-live="polite">{len(cards)} {finding_word}</p>
-      <div id="findings">{findings_content}</div>
-      <p id="no-matches" hidden>No findings match the search.</p>
-    </section>
-    {references}
+    {content}
     <footer>Generated by Nessus Organiser. This report works offline and contains assessment data.</footer>
   </main>
   <script>
@@ -123,14 +220,16 @@ def render_html(sections: ReportSections) -> str:
     const search = document.getElementById("search");
     search.addEventListener("input", () => {{
       const query = search.value.trim().toLowerCase();
-      let visible = 0;
+      const groups = new Set(cards.map((card, index) => card.dataset.group ?? String(index)));
+      const matching = new Set(cards.filter(card => card.textContent.toLowerCase().includes(query))
+        .map(card => card.dataset.group ?? String(cards.indexOf(card))));
       for (const card of cards) {{
-        card.hidden = !card.textContent.toLowerCase().includes(query);
-        if (!card.hidden) visible++;
+        const group = card.dataset.group ?? String(cards.indexOf(card));
+        card.hidden = !matching.has(group);
       }}
       document.getElementById("count").textContent =
-        `${{visible}} of ${{cards.length}} ${{cards.length === 1 ? "finding" : "findings"}}`;
-      document.getElementById("no-matches").hidden = visible > 0 || !cards.length;
+        `${{matching.size}} of ${{groups.size}} ${{groups.size === 1 ? "finding" : "findings"}}`;
+      document.getElementById("no-matches").hidden = matching.size > 0 || !groups.size;
     }});
 
     async function copyText(text) {{
@@ -178,8 +277,29 @@ def generate_html(
     remediation_introduction: str | None = None,
     statistics: dict | None = None,
     ithc: bool = False,
-) -> None:
+    closure_review: bool = False,
+    grouped: bool = False,
+    show_severity: bool = False,
+) -> Path:
     sections = build_report_sections(
         findings, title, introduction, remediation_introduction, statistics, ithc
     )
-    output_path.write_text(render_html(sections), encoding="utf-8")
+    report = render_html(
+        sections, closure_review=closure_review, grouped=grouped,
+        show_severity=show_severity,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    candidate = output_path
+    suffix = 0
+    while True:
+        try:
+            file = candidate.open("x", encoding="utf-8")
+        except FileExistsError:
+            suffix += 1
+            candidate = output_path.with_name(
+                f"{output_path.stem}-{suffix}{output_path.suffix}"
+            )
+            continue
+        with file:
+            file.write(report)
+        return candidate

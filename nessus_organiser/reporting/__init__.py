@@ -1,11 +1,17 @@
 """Report generation helpers."""
 
+from datetime import datetime
 from pathlib import Path
 
 from rich.console import Console
 
 from nessus_organiser.models.finding import Finding
 from nessus_organiser.reporting.html import generate_html
+
+
+def report_path(name: str, timestamp: datetime | None = None) -> Path:
+    timestamp = timestamp or datetime.now()
+    return Path("nessus-organiser") / f"{name}-{timestamp:%Y%m%d-%H%M%S}.html"
 
 
 def generate_report(
@@ -16,16 +22,17 @@ def generate_report(
     remediation_introduction: str | None = None,
     statistics: dict | None = None,
     ithc: bool = False,
-) -> bool:
+    grouped: bool = False,
+    show_severity: bool = False,
+) -> Path | None:
     if output_path.suffix.lower() != ".html":
         raise ValueError("Report output must have a .html extension.")
     if not findings:
-        message = f"No findings for {title}; no report was generated."
-        if output_path.exists():
-            message += f" Existing report '{output_path}' was not updated."
-        Console(stderr=True).print(message, markup=False)
-        return False
-    generate_html(
+        Console(stderr=True).print(
+            f"No findings for {title}; no report was generated.", markup=False
+        )
+        return None
+    return generate_html(
         findings=findings,
         output_path=output_path,
         title=title,
@@ -33,5 +40,6 @@ def generate_report(
         remediation_introduction=remediation_introduction,
         statistics=statistics,
         ithc=ithc,
+        grouped=grouped,
+        show_severity=show_severity,
     )
-    return True

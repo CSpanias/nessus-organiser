@@ -356,10 +356,11 @@ def format_markdown(sections: ReportSections) -> str:
     if sections.overview:
         output.append(sections.overview)
     output.extend(text for _, text in sections.commentary)
-    output.append("# Remediation")
-    if sections.remediation_introduction:
-        output.append(sections.remediation_introduction)
-    output.extend(text for _, text in sections.remediation)
+    if sections.remediation or sections.remediation_introduction:
+        output.append("# Remediation")
+        if sections.remediation_introduction:
+            output.append(sections.remediation_introduction)
+        output.extend(text for _, text in sections.remediation)
     if sections.references:
         output.extend(["# References", sections.references])
     return "\n\n".join(output) + "\n"

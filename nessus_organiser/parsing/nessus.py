@@ -10,6 +10,7 @@ parsing XML directly.
 """
 
 from pathlib import Path
+from collections.abc import Callable
 import xml.etree.ElementTree as ET
 
 from nessus_organiser.models.plugin import PluginFinding
@@ -27,7 +28,10 @@ SEVERITY_MAP = {
 }
 
 
-def load_nessus(path: Path) -> list[PluginFinding]:
+def load_nessus(
+    path: Path,
+    on_progress: Callable[[int, int], None] | None = None,
+) -> list[PluginFinding]:
     """
     Parse a Nessus XML file.
 
@@ -52,7 +56,10 @@ def load_nessus(path: Path) -> list[PluginFinding]:
     tree = ET.parse(path)
     root = tree.getroot()
 
-    for report_host in root.findall(".//ReportHost"):
+    report_hosts = root.findall(".//ReportHost")
+    if on_progress:
+        on_progress(0, len(report_hosts))
+    for index, report_host in enumerate(report_hosts, 1):
 
         host = report_host.attrib.get("name", "")
 
@@ -62,6 +69,8 @@ def load_nessus(path: Path) -> list[PluginFinding]:
                 host=host,
             )
         )
+        if on_progress:
+            on_progress(index, len(report_hosts))
 
     return findings
 

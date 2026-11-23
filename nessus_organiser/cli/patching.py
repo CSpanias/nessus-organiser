@@ -17,10 +17,11 @@ from nessus_organiser.common.counting import (
     count_unique_host_plugin_findings,
 )
 from nessus_organiser.common.tables import print_summary_table
+from nessus_organiser.common.progress import load_scan
 from nessus_organiser.content.loader import load_patch_management_content
 from nessus_organiser.findings.factory import build_findings
 from nessus_organiser.organising.patching import organise_patch_management
-from nessus_organiser.parsing.nessus import load_nessus
+from nessus_organiser.models.plugin import PluginFinding
 from nessus_organiser.reporting import generate_report
 
 def run(
@@ -28,6 +29,7 @@ def run(
     output_file: Path,
     scope: str,
     ithc: bool = False,
+    plugin_findings: list[PluginFinding] | None = None,
 ) -> None:
     """
     Generate a Patch Management report from a Nessus scan.
@@ -47,7 +49,8 @@ def run(
     """
 
     # Raw Nessus findings
-    plugin_findings = load_nessus(path=nessus_file)
+    if plugin_findings is None:
+        plugin_findings = load_scan(nessus_file)
 
     # Organised findings
     organisation_result = organise_patch_management(findings=plugin_findings)
@@ -112,7 +115,10 @@ def run(
                 "introduction"
             ),
             ithc=ithc,
+            grouped=True,
         )
+    if generated is None:
+        return
 
     print()
     print_summary_table(
@@ -125,6 +131,7 @@ def run(
             ("Legacy Vulnerabilities", f"{legacy_vulnerability_count:,}"),
             ("Identified Categories", str(identified_categories)),
             ("Generated Findings", str(len(report_findings))),
-            ("Output File", str(output_file) if generated else "Not generated"),
+            ("Output Directory", str(generated.parent)),
+            ("Output File", generated.name),
         ],
     )

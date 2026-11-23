@@ -30,6 +30,7 @@ TLS_CATEGORIES = {
             "65821",
             "42873",
             "81606",
+            "51893",
         }
     },
 
@@ -56,6 +57,11 @@ TLS_CATEGORIES = {
     "weak_dh_parameters": {
         "plugin_ids": {
             "83875",
+        }
+    },
+
+    "weak_dh_key_validation": {
+        "plugin_ids": {
             "53360",
         }
     },

@@ -13,10 +13,11 @@ from nessus_organiser.common.counting import (
     count_findings,
 )
 from nessus_organiser.common.tables import print_summary_table
+from nessus_organiser.common.progress import load_scan
 from nessus_organiser.content.loader import load_ssh_content
 from nessus_organiser.findings.factory import build_findings
 from nessus_organiser.organising.ssh import organise_ssh, build_evidence
-from nessus_organiser.parsing.nessus import load_nessus
+from nessus_organiser.models.plugin import PluginFinding
 from nessus_organiser.reporting import generate_report
 
 
@@ -24,6 +25,7 @@ def run(
     nessus_file: Path,
     output_file: Path,
     scope: str,
+    plugin_findings: list[PluginFinding] | None = None,
 ) -> None:
     """
     Generate an SSH report from a Nessus scan.
@@ -45,7 +47,8 @@ def run(
     excluded_plugins = 0
 
     # Raw Nessus findings
-    plugin_findings = load_nessus(path=nessus_file)
+    if plugin_findings is None:
+        plugin_findings = load_scan(nessus_file)
 
     # Organised findings
     grouped_findings = organise_ssh(findings=plugin_findings)
@@ -100,6 +103,8 @@ def run(
             "remediation_introduction"
         ),
     )
+    if generated is None:
+        return
 
     print()
     print_summary_table(
@@ -111,6 +116,7 @@ def run(
             ("SSH Vulnerabilities", f"{ssh_vulnerability_count:,}"),
             ("Identified Categories", str(identified_categories)),
             ("Generated Findings", str(len(report_findings))),
-            ("Output File", str(output_file) if generated else "Not generated"),
+            ("Output Directory", str(generated.parent)),
+            ("Output File", generated.name),
         ],
     )

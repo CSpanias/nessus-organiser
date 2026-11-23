@@ -31,7 +31,7 @@ def print_summary_table(
     )
 
     table.add_column("Metric", no_wrap=True, style="bold")
-    table.add_column("Value", justify="right")
+    table.add_column("Value", justify="right", overflow="fold")
 
     for metric, value in rows:
 

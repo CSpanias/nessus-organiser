@@ -40,6 +40,38 @@ def analyse_tls_finding(
 
     finding = _apply_scope(finding=finding, scope=scope)
     finding = _apply_evidence(finding=finding, content=content)
+    finding.severity_justification = None
+    if scope == "external" and finding.category == "weak_cipher_suites":
+        resumption_severities = [
+            plugin.severity for plugin in finding.affected_plugins
+            if plugin.plugin_id == "51893"
+        ]
+        if resumption_severities:
+            severity_order = ("Informational", "Low", "Medium", "High", "Critical")
+            finding.severity = max(
+                [finding.severity, *resumption_severities], key=severity_order.index
+            )
+    if scope == "internal":
+        definition = content[finding.category]
+        plugin_ids = {plugin.plugin_id for plugin in finding.affected_plugins}
+        justifications = []
+        if finding.category == "deprecated_tls_support" and "42880" in plugin_ids:
+            if plugin_ids & {"104743", "157288"}:
+                justifications.append(definition["severity_justification"][scope])
+            justifications.append(
+                content["tls_insecure_renegotiation"]["severity_justification"][scope]
+            )
+        elif finding.category == "weak_cipher_suites" and "51893" in plugin_ids:
+            if plugin_ids - {"51893"}:
+                justifications.append(definition["severity_justification"][scope])
+            justifications.append(
+                content["tls_session_resumption"]["severity_justification"][scope]
+            )
+        else:
+            justification = definition.get("severity_justification", {}).get(scope)
+            if justification:
+                justifications.append(justification)
+        finding.severity_justification = "\n\n".join(justifications) or None
 
     return finding
 
@@ -178,15 +210,30 @@ def _apply_evidence(
                     "renegotiation."
                 )
 
-            _append_content(
-                finding=finding,
-                definition=content["tls_insecure_renegotiation"],
-            )
+            definition = content["tls_insecure_renegotiation"]
+            if not tls10 and not tls11:
+                finding.title = definition["title"]
+                finding.commentary = definition["commentary"]
+                finding.solution = definition["solution"]
+                finding.references = list(definition.get("references", []))
+            else:
+                _append_content(finding=finding, definition=definition)
 
     #---------------------------------------------------------------------------
     # Weak cipher suites
     #---------------------------------------------------------------------------
     if finding.category == "weak_cipher_suites":
+
+        plugin_ids = {plugin.plugin_id for plugin in finding.affected_plugins}
+        if "51893" in plugin_ids:
+            definition = content["tls_session_resumption"]
+            if plugin_ids == {"51893"}:
+                finding.title = definition["title"]
+                finding.commentary = definition["commentary"]
+                finding.solution = definition["solution"]
+                finding.references = list(definition.get("references", []))
+            else:
+                _append_content(finding=finding, definition=definition)
 
         des = ("3DES-based cipher suites" in finding.evidence)
         rc4 = ("RC4-based cipher suites" in finding.evidence)
