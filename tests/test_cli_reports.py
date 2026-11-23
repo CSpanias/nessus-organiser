@@ -156,14 +156,20 @@ class CliReportTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             for name in ("tls-review", "ssh-review", "patch-management-review", "closure-review"):
                 self.assertTrue(self.only_report(base, name).is_file(), name)
+            tls = self.only_report(base, "tls-review").read_text(encoding="utf-8")
+            tls_remediation = tls.split('<section class="panel"><h2>Remediation</h2>', 1)[1].split("</section>", 1)[0]
+            self.assertIn("Strengthen TLS configurations across affected services", tls_remediation)
+            self.assertIn("<h3>References</h3>", tls_remediation)
+            self.assertIn('href="https://learn.microsoft.com/en-us/dotnet/core/extensions/sslstream-best-practices"', tls_remediation)
+            self.assertNotIn('<section class="panel"><h2>References</h2>', tls)
             report = self.only_report(base, "closure-review").read_text(encoding="utf-8")
             for expected in ("10114", "35371", "hostname.bind",
-                             "Assessment scope: internal.", "time-based authentication",
+                             "Assessment scope: internal.",
                              "www.tenable.com/plugins/nessus/10114",
                              "www.tenable.com/plugins/nessus/35371"):
                 self.assertIn(expected, report)
             self.assertNotIn("host-a", report)
-            self.assertIn("not automatic decisions", report)
+            self.assertIn("The following findings are closed in the internal assessment context.", report)
             cards = re.findall(r'<article class="finding">(.*?)</article>', report, re.S)
             self.assertEqual(len(cards), 2)
             for plugin_id in ("10114", "35371"):
@@ -172,11 +178,18 @@ class CliReportTests(unittest.TestCase):
                 self.assertIn(f'href="https://www.tenable.com/plugins/nessus/{plugin_id}"', card)
                 self.assertIn("<h4>References</h4>", card)
                 self.assertNotIn("<summary>Remediation</summary>", card)
+                self.assertIn("finding is therefore closed.", " ".join(card.split()))
+                self.assertNotIn("Closure may be appropriate", " ".join(card.split()))
             self.assertNotIn('<section class="panel"><h2>References</h2>', report)
             self.assertNotIn("# Remediation", report)
             patching = self.only_report(base, "patch-management-review").read_text(encoding="utf-8")
             self.assertIn("ITHC", patching)
             self.assertIn("csrc.nist.gov/pubs/sp/800/40/r4/final", patching)
+            remediation = patching.split('<section class="panel"><h2>Remediation</h2>', 1)[1].split("</section>", 1)[0]
+            self.assertIn("Address the identified issues through a risk-based patch", remediation)
+            self.assertIn("<h3>References</h3>", remediation)
+            self.assertIn('href="https://csrc.nist.gov/pubs/sp/800/40/r4/final"', remediation)
+            self.assertNotIn('<section class="panel"><h2>References</h2>', patching)
 
     def test_external_and_unmatched_scans_do_not_create_or_modify_closure(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -240,8 +253,9 @@ class CliReportTests(unittest.TestCase):
                     self.assertIn('<span class="badge">Nessus 10884</span>', report)
                     self.assertNotIn("SC-2101", report)
                     self.assertIn("limited additional attack value", report)
-                    self.assertIn("amplification functionality", report)
                     self.assertIn("www.tenable.com/plugins/nessus/10884", report)
+                    self.assertIn("The finding is therefore closed.", " ".join(report.split()))
+                    self.assertNotIn("Closure may be appropriate", " ".join(report.split()))
                     self.assertNotIn("host-a", report)
 
                     previous = set(self.reports(base, "closure-review"))

@@ -12,6 +12,13 @@ introduction: |
   The following findings provide further information regarding the
   identified issues and recommended remediation measures.
 
+remediation_introduction: |
+  Strengthen TLS configurations across affected services by addressing the
+  identified protocol, cryptographic and certificate weaknesses as applicable.
+  Validate changes against service and client requirements.
+
+internal_severity_conclusion: No practical impact was demonstrated during the assessment.
+
 deprecated_ssl_support:
 
   id: TLS-001
@@ -27,9 +34,7 @@ deprecated_ssl_support:
     internal: |
       Legacy SSL protocols can expose services to attacks such as POODLE or
       DROWN, depending on the versions enabled. Modern clients rarely use
-      these protocols and exploitation requires additional conditions; an
-      Informational rating may be appropriate where no practical attack path
-      has been demonstrated.
+      these protocols and exploitation requires additional conditions.
 
   commentary: |
     The service supported one or more legacy SSL protocols which contain
@@ -142,8 +147,7 @@ weak_cipher_suites:
     internal: |
       Modern clients generally prioritise stronger alternatives, while
       exploitation depends on adversary-in-the-middle positioning and
-      negotiation of weaker algorithms. An Informational rating may be
-      appropriate where no practical impact has been demonstrated.
+      negotiation of weaker algorithms.
 
   commentary: |
     The service supported one or more weak or deprecated SSL/TLS cipher suites
@@ -289,8 +293,7 @@ weak_certificate_cryptography:
     internal: |
       Deprecated certificate algorithms or key lengths primarily indicate a
       cryptographic hardening issue. Exploitation may require significant
-      computational resources; an Informational rating may be appropriate
-      where no realistic compromise scenario has been identified.
+      computational resources.
 
   commentary: |
     The TLS certificate chain presented by the service utilised cryptographic

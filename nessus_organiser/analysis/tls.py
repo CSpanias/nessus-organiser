@@ -71,7 +71,11 @@ def analyse_tls_finding(
             justification = definition.get("severity_justification", {}).get(scope)
             if justification:
                 justifications.append(justification)
-        finding.severity_justification = "\n\n".join(justifications) or None
+        if justifications:
+            finding.severity_justification = (
+                "\n\n".join(justifications).strip()
+                + " " + content["internal_severity_conclusion"]
+            )
 
     return finding
 

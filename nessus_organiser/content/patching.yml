@@ -20,6 +20,11 @@ introduction: |
   patching and software-lifecycle weaknesses, together with guidance
   to assist remediation and risk reduction activities.
 
+remediation_introduction: |
+  Address the identified issues through a risk-based patch and software
+  lifecycle management process. Prioritise remediation based on severity,
+  exposure and vendor guidance.
+
 unsupported_software:
 
   id: SW-001

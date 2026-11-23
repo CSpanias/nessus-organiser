@@ -26,6 +26,7 @@ def _copy_controls(markdown: str, label: str) -> str:
 def render_html(
     sections: ReportSections, *, closure_review: bool = False,
     grouped: bool = False, show_severity: bool = False,
+    references_in_remediation: bool = False,
 ) -> str:
     """Render a report without external assets or network access."""
     markdown = MarkdownIt("commonmark", {"html": False}).enable("table").disable("image")
@@ -112,31 +113,40 @@ def render_html(
             ([sections.remediation_introduction] if sections.remediation_introduction else [])
             + [text for _, text in sections.remediation]
         )
-        notice = (
-            "Severity justifications are review templates. Verify the assessment "
-            "context and any manual testing before using them."
-        )
+        nested_references = ""
+        if references_in_remediation and sections.references:
+            remediation_text += "\n\n### References\n\n" + sections.references
+            nested_references = (
+                "<div><h3>References</h3>"
+                + _copy_controls(sections.references, "references")
+                + markdown.render(sections.references)
+                + "</div>"
+            )
         severity_items = [
             (
                 finding,
                 f"### {escape_markdown_text(finding.title)}\n\n"
-                f"**Severity:** {escape_markdown_text(finding.severity)}"
+                + (
+                    " ".join(sorted(
+                        {plugin.plugin_id for plugin in finding.affected_plugins},
+                        key=int,
+                    )) + "\n\n"
+                    if finding.affected_plugins else ""
+                )
+                + f"**Severity:** {escape_markdown_text(finding.severity)}"
                 + (f"\n\n{finding.severity_justification.strip()}"
                    if finding.severity_justification else ""),
             )
             for finding, _ in sections.commentary if show_severity
         ]
-        severity_text = "\n\n".join(
-            ([notice] if any(f.severity_justification for f, _ in severity_items) else [])
-            + [text for _, text in severity_items]
-        )
+        severity_text = "\n\n".join(text for _, text in severity_items)
         report_parts = [
             f"# {sections.title}", f"## Finding\n\n{finding_text}",
             f"## Remediation\n\n{remediation_text}",
         ]
         if show_severity:
             report_parts.append(f"## Severity\n\n{severity_text}")
-        if sections.references:
+        if sections.references and not references_in_remediation:
             report_parts.append(f"## References\n\n{sections.references}")
 
         def grouped_cards(items: list[tuple[Finding, str]]) -> str:
@@ -156,17 +166,16 @@ def render_html(
             + _copy_controls(remediation_text, "remediation")
             + (markdown.render(sections.remediation_introduction)
                if sections.remediation_introduction else "")
-            + grouped_cards(sections.remediation) + "</section>"
+            + grouped_cards(sections.remediation) + nested_references + "</section>"
         )
         if show_severity:
             content += (
                 '<section class="panel"><h2>Severity</h2>'
                 + _copy_controls(severity_text, "severity")
-                + (markdown.render(notice)
-                   if any(f.severity_justification for f, _ in severity_items) else "")
                 + grouped_cards(severity_items) + "</section>"
             )
-        content += references
+        if not references_in_remediation:
+            content += references
     else:
         content = (
             '<section class="panel"><h2>Report Overview</h2>'
@@ -281,13 +290,14 @@ def generate_html(
     closure_review: bool = False,
     grouped: bool = False,
     show_severity: bool = False,
+    references_in_remediation: bool = False,
 ) -> Path:
     sections = build_report_sections(
         findings, title, introduction, remediation_introduction, statistics, ithc
     )
     report = render_html(
         sections, closure_review=closure_review, grouped=grouped,
-        show_severity=show_severity,
+        show_severity=show_severity, references_in_remediation=references_in_remediation,
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     candidate = output_path

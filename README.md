@@ -48,8 +48,9 @@ uv tool upgrade nessus-organiser
 - Identify TLS-related vulnerabilities
 - Consolidate related findings into root-cause observations
 - Group findings, remediation and severity guidance into copyable sections
-- Include reviewable severity-justification templates for internal assessments;
-  verify the assessment context and any manual testing before using them
+- List the associated Nessus plugin IDs under each severity heading
+- Include TLS references in the remediation section
+- Include severity justifications for internal assessments
 - Preserve plugin 51893's scanner severity for external assessments when it is
   higher than the existing weak-cipher group rating
 
@@ -59,6 +60,7 @@ uv tool upgrade nessus-organiser
 - Identify unsupported and end-of-life software
 - Calculate vulnerability statistics
 - Group findings and remediation into copyable sections
+- Include patch management references in the remediation section
 
 ### SSH Reviews
 

@@ -117,8 +117,12 @@ def run(
             introduction=patch_management_content.get(
                 "introduction"
             ),
+            remediation_introduction=patch_management_content.get(
+                "remediation_introduction"
+            ),
             ithc=ithc,
             grouped=True,
+            references_in_remediation=True,
             console=console,
         )
     if generated is None:

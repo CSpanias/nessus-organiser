@@ -84,8 +84,7 @@ class HtmlReportTests(unittest.TestCase):
             self.assertIn(f"<h2>{heading}</h2>", report)
         for finding in findings:
             self.assertEqual(report.count(f"<h3>{finding.title}</h3>"), 3)
-        self.assertIn("Severity justifications are review templates", report)
-        self.assertIn("Verify the assessment context", report)
+        self.assertNotIn("Severity justifications are review templates", report)
         self.assertIn("### Weak Diffie\\-Hellman Key Validation", report)
         self.assertIn('data-group="weak_dh_key_validation"', report)
 
@@ -101,11 +100,60 @@ class HtmlReportTests(unittest.TestCase):
                 generate_report([finding], path, content["title"], grouped=True, show_severity=True)
                 report = path.read_text(encoding="utf-8")
                 self.assertIn(f"<strong>Severity:</strong> {severity}", report)
-                self.assertEqual("Severity justifications are review templates" in report, scope == "internal")
+                self.assertNotIn("Severity justifications are review templates", report)
                 self.assertEqual(
                     "does not necessarily imply immediate exploitability" in " ".join(report.split()),
                     scope == "internal",
                 )
+
+    def test_tls_remediation_copy_includes_nested_references(self) -> None:
+        content = load_tls_content()
+        findings = build_findings(
+            organise_tls([plugin("104743", "TLS")]), content, build_evidence
+        )
+        finding = analyse_tls_finding(findings[0], "internal", content)
+        sections = build_report_sections(
+            [finding], content["title"],
+            remediation_introduction=content["remediation_introduction"],
+        )
+        report = render_html(
+            sections, grouped=True, show_severity=True, references_in_remediation=True
+        )
+        remediation = report.split('<section class="panel"><h2>Remediation</h2>', 1)[1].split("</section>", 1)[0]
+        self.assertIn("Strengthen TLS configurations across affected services", remediation)
+        self.assertIn("<h3>References</h3>", remediation)
+        self.assertNotIn('<section class="panel"><h2>References</h2>', report)
+        self.assertIn("<h2>Severity</h2>", report)
+        copies = copy_payloads(report)
+        self.assertTrue(copies["remediation"].startswith("Strengthen TLS configurations"))
+        self.assertIn("### References\n\n", copies["remediation"])
+        self.assertIn("https://learn.microsoft.com/en-us/dotnet/core/extensions/sslstream-best-practices", copies["remediation"])
+        self.assertIn("### References\n\n", copies["report"])
+        self.assertNotRegex(copies["report"], r"(?m)^## References$")
+        without_references = render_html(
+            sections._replace(references=""), grouped=True, show_severity=True,
+            references_in_remediation=True,
+        )
+        self.assertNotIn("<h3>References</h3>", without_references)
+
+    def test_tls_severity_lists_unique_plugin_ids_below_each_title(self) -> None:
+        content = load_tls_content()
+        plugins = [
+            plugin("157288", "TLS 1.1"), plugin("104743", "TLS 1.0"),
+            plugin("104743", "TLS 1.0"), plugin("53360", "DH key validation"),
+        ]
+        findings = build_findings(organise_tls(plugins), content, build_evidence)
+        findings = [analyse_tls_finding(f, "internal", content) for f in findings]
+        report = render_html(
+            build_report_sections(findings, content["title"]),
+            grouped=True, show_severity=True, references_in_remediation=True,
+        )
+        severity = report.split('<section class="panel"><h2>Severity</h2>', 1)[1].split("</section>", 1)[0]
+        self.assertIn("<p>104743 157288</p>", severity)
+        self.assertIn("<p>53360</p>", severity)
+        copied = copy_payloads(report)["severity"]
+        self.assertRegex(copied, r"### Deprecated TLS.*\n\n104743 157288\n\n\*\*Severity:")
+        self.assertIn("### Weak Diffie\\-Hellman Key Validation\n\n53360\n\n", copied)
 
     def test_section_copies_omit_section_headings_but_keep_nested_titles(self) -> None:
         content = load_tls_content()
@@ -151,12 +199,27 @@ class HtmlReportTests(unittest.TestCase):
         }
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "patch.html"
-            generate_report(findings, path, content["title"], statistics=statistics, grouped=True)
+            generate_report(
+                findings, path, content["title"], statistics=statistics, grouped=True,
+                remediation_introduction=content["remediation_introduction"],
+                references_in_remediation=True,
+            )
             report = path.read_text(encoding="utf-8")
         self.assertIn("<h2>Finding</h2>", report)
         self.assertIn("<h2>Remediation</h2>", report)
         self.assertNotIn("<h2>Severity</h2>", report)
         self.assertEqual(report.count(f"<h3>{findings[0].title}</h3>"), 2)
+        remediation = report.split('<section class="panel"><h2>Remediation</h2>', 1)[1].split("</section>", 1)[0]
+        self.assertIn("Address the identified issues through a risk-based patch", remediation)
+        self.assertIn("<h3>References</h3>", remediation)
+        self.assertIn('href="https://csrc.nist.gov/pubs/sp/800/40/r4/final"', remediation)
+        self.assertNotIn('<section class="panel"><h2>References</h2>', report)
+        copies = copy_payloads(report)
+        self.assertTrue(copies["remediation"].startswith("Address the identified issues"))
+        self.assertIn("### References\n\n", copies["remediation"])
+        self.assertIn("https://csrc.nist.gov/pubs/sp/800/40/r4/final", copies["remediation"])
+        self.assertIn("### References\n\n", copies["report"])
+        self.assertNotRegex(copies["report"], r"(?m)^## References$")
 
     def test_tls_plugin_specific_content_does_not_claim_unrelated_issues(self) -> None:
         content = load_tls_content()
@@ -205,6 +268,10 @@ class HtmlReportTests(unittest.TestCase):
                         expected = "High" if scope == "external" and plugin_id == "51893" else severity
                         self.assertEqual(finding.severity, expected)
                         self.assertEqual(bool(finding.severity_justification), scope == "internal")
+                        if scope == "internal":
+                            self.assertTrue(finding.severity_justification.endswith(
+                                "No practical impact was demonstrated during the assessment."
+                            ))
 
     def test_tls_combined_cipher_and_renegotiation_content(self) -> None:
         content = load_tls_content()
@@ -218,10 +285,16 @@ class HtmlReportTests(unittest.TestCase):
         self.assertIn("weak or deprecated", ciphers.commentary)
         self.assertIn("session resumption", ciphers.severity_justification)
         self.assertIn("Modern clients", ciphers.severity_justification)
+        self.assertEqual(ciphers.severity_justification.count(
+            "No practical impact was demonstrated during the assessment."
+        ), 1)
         tls = by_category["deprecated_tls_support"]
         self.assertIn("renegotiation", tls.commentary)
         self.assertIn("TLS 1.0", tls.severity_justification)
         self.assertIn("renegotiation", tls.severity_justification)
+        self.assertEqual(tls.severity_justification.count(
+            "No practical impact was demonstrated during the assessment."
+        ), 1)
 
     def test_external_cipher_group_keeps_resumption_plugin_severity(self) -> None:
         content = load_tls_content()

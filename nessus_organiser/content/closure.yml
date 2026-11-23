@@ -1,10 +1,7 @@
 title: Finding Closure Review
 
 introduction: |
-  The following findings are candidates for closure in the stated scope.
-  These are suggested justifications, not automatic decisions. Review the
-  affected systems, their exposure and applicable requirements before
-  accepting the risk or closing a finding.
+  The following findings are closed in the internal assessment context.
 
 plugins:
   "10884":
@@ -14,9 +11,7 @@ plugins:
       commentary: |
         An NTP service on the internal network offers limited additional
         attack value and, by itself, does not demonstrate a path to
-        compromise. Closure may be appropriate after checking for information
-        disclosure, amplification functionality and vulnerable versions, and
-        confirming that the service's exposure meets internal requirements.
+        compromise. The finding is therefore closed.
 
       references:
         - https://www.tenable.com/plugins/nessus/10884
@@ -26,10 +21,8 @@ plugins:
     internal:
       commentary: |
         ICMP timestamp responses disclose system time but generally provide
-        limited additional attack value in an internal network. Closure may
-        be appropriate after confirming that the exposure does not materially
-        affect time-based authentication and meets internal security
-        requirements.
+        limited additional attack value in an internal network. The finding
+        is therefore closed.
 
       references:
         - https://www.tenable.com/plugins/nessus/10114
@@ -40,10 +33,8 @@ plugins:
     internal:
       commentary: |
         The hostname.bind response discloses the DNS server's hostname but
-        does not itself provide a direct path to compromise. Closure may be
-        appropriate in the internal environment after confirming that the
-        hostname reveals no sensitive information and the exposure meets
-        internal security requirements.
+        does not itself provide a direct path to compromise. In the internal
+        assessment context, the finding is therefore closed.
 
       references:
         - https://www.tenable.com/plugins/nessus/35371

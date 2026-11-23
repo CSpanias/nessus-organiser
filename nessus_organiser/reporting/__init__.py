@@ -24,6 +24,7 @@ def generate_report(
     ithc: bool = False,
     grouped: bool = False,
     show_severity: bool = False,
+    references_in_remediation: bool = False,
     console: Console | None = None,
 ) -> Path | None:
     if output_path.suffix.lower() != ".html":
@@ -43,4 +44,5 @@ def generate_report(
         ithc=ithc,
         grouped=grouped,
         show_severity=show_severity,
+        references_in_remediation=references_in_remediation,
     )

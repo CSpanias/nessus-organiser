@@ -91,8 +91,10 @@ def run(
         output_path=output_file,
         title=tls_content["title"],
         introduction=tls_content.get("introduction"),
+        remediation_introduction=tls_content.get("remediation_introduction"),
         grouped=True,
         show_severity=True,
+        references_in_remediation=True,
         console=console,
     )
     if generated is None:
