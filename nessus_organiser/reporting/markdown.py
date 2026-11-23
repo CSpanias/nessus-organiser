@@ -1,18 +1,33 @@
 """
 nessus_organiser.reporting.markdown
 
-Generate Markdown reports from Finding objects.
+Build Markdown for report content and clipboard copying.
 """
 
 import re
 
-from pathlib import Path
+from typing import NamedTuple
 
 from nessus_organiser.models.finding import Finding
 
 _LIST_ITEM_PATTERN = re.compile(r"^(\s*)([-*+]|\d+[.)])\s+(.*)$")
 _HEADING_PATTERN = re.compile(r"^#{1,6}\s+")
 _CODE_FENCE_PATTERN = re.compile(r"^\s*(`{3}|~{3})")
+
+
+class ReportSections(NamedTuple):
+    title: str
+    overview: str
+    commentary: list[tuple[Finding, str]]
+    remediation_introduction: str
+    remediation: list[tuple[Finding, str]]
+    references: str
+
+
+def escape_markdown_text(value: str) -> str:
+    """Keep scanner-provided text literal in Markdown output."""
+    value = " ".join(value.splitlines())
+    return re.sub(r"([\\`*_{}\[\]()#+.!|<>-])", r"\\\1", value)
 
 
 def _reflow_markdown(text: str | None) -> str:
@@ -102,26 +117,21 @@ def _reflow_markdown(text: str | None) -> str:
     return "\n".join(output)
 
 
-def generate_markdown(
+def build_report_sections(
     findings: list[Finding],
-    output_path: Path,
     title: str,
     introduction: str | None = None,
     remediation_introduction: str | None = None,
     statistics: dict | None = None,
     ithc: bool = False,
-) -> None:
+) -> ReportSections:
     """
-    Generate a Markdown report from Finding objects.
+    Build the shared Markdown sections used by report renderers.
 
     Args:
         findings:
             Consultant-facing findings to include in
             the report.
-
-        output_path:
-            Destination path for the generated Markdown
-            document.
 
         title:
             Report title.
@@ -141,25 +151,18 @@ def generate_markdown(
             identified findings.
     """
 
-    output: list[str] = []
-
-    commentary_output = []
-    remediation_output = []
+    overview: list[str] = []
+    commentary_sections: list[tuple[Finding, str]] = []
+    remediation_sections: list[tuple[Finding, str]] = []
 
     references = set()
-
-    #---------------------------------------------------------------------------
-    # Technical Commentary Section
-    #---------------------------------------------------------------------------
-    output.append(f"# {title}")
-    output.append("")
 
     #---------------------------------------------------------------------------
     # Finding Introduction Section
     #---------------------------------------------------------------------------
     if introduction:
-        output.append(_reflow_markdown(introduction))
-        output.append("")
+        overview.append(_reflow_markdown(introduction))
+        overview.append("")
 
     #---------------------------------------------------------------------------
     # Overview Table
@@ -167,41 +170,42 @@ def generate_markdown(
     if statistics:
 
         # Assessment Summary Table
-        output.append(
+        overview.append(
             "The below table provides a summary of the identified "
             "patch-management-related vulnerabilities across the assessed "
             "environment:"
         )
-        output.append("")
+        overview.append("")
 
-        output.append("| Metric | Value |")
-        output.append("|--------|------:|")
+        overview.append("| Metric | Value |")
+        overview.append("|--------|------:|")
 
-        output.append(
+        overview.append(
             f"| Legacy Vulnerabilities | "
             f"{statistics['summary']['legacy_vulnerabilities']:,} |"
         )
 
-        output.append(
+        overview.append(
             f"| Patch Vulnerabilities | "
             f"{statistics['summary']['patch_vulnerabilities']:,} |"
         )
 
-        output.append(
+        overview.append(
             f"| Total Vulnerabilities | "
             f"{statistics['summary']['total_vulnerabilities']:,} |"
         )
 
-        output.append("")
-        output.append(
+        overview.append("")
+        overview.append(
             "Counts are deduplicated by host and Nessus plugin ID. A finding "
             "detected on multiple ports of the same host is counted once; "
             "the same plugin on different hosts is counted separately."
         )
-        output.append("")
+        overview.append("")
     
 
     for finding in findings:
+        commentary_output: list[str] = []
 
         #-----------------------------------------------------------------------
         # Vulnerability Title Section
@@ -227,6 +231,8 @@ def generate_markdown(
         #-----------------------------------------------------------------------
 
         if ithc and finding.category == "unsupported_software":
+            legacy_count = statistics["summary"]["legacy_vulnerabilities"]
+            instance_label = "instance" if legacy_count == 1 else "instances"
 
             commentary_output.append(
                 "For ITHC reporting purposes, unsupported software findings "
@@ -234,8 +240,8 @@ def generate_markdown(
                 "require particular consideration, as unresolved issues may "
                 "need to be addressed through the organisation's remediation "
                 "activities or documented within a Remediation Action Plan. "
-                f"Of the {statistics['summary']['legacy_vulnerabilities']:,} "
-                "unsupported software instances identified during testing, "
+                f"Of the {legacy_count:,} unsupported software {instance_label} "
+                "identified during testing, "
                 f"{statistics['high_risk']['legacy_vulnerabilities']:,} "
                 "had a CVSSv3 base score of 7.0 or greater. These findings "
                 "relate to software that no longer receives vendor security "
@@ -246,6 +252,8 @@ def generate_markdown(
             commentary_output.append("")
 
         if ithc and finding.category == "missing_security_patches":
+            high_risk_count = statistics["high_risk"]["patch_vulnerabilities"]
+            instance_label = "instance" if high_risk_count == 1 else "instances"
 
             commentary_output.append(
                 "ITHC guidance requires organisations to demonstrate how "
@@ -253,8 +261,8 @@ def generate_markdown(
                 "been remediated or are being managed through a documented "
                 "remediation plan. Analysis of the identified missing security "
                 "updates found that "
-                f"{statistics['high_risk']['patch_vulnerabilities']:,} "
-                "vulnerability instances had a CVSSv3 base score of 7.0 or "
+                f"{high_risk_count:,} vulnerability {instance_label} "
+                "had a CVSSv3 base score of 7.0 or "
                 "greater. These vulnerabilities represent the highest-risk "
                 "subset of the identified patching issues and should be "
                 "prioritised for remediation to reduce exposure to publicly "
@@ -282,7 +290,9 @@ def generate_markdown(
 
             for name, cvss, count, percentage in (statistics["top_legacy_findings"]):
 
-                commentary_output.append(f"| {name} | {cvss} | {count:,} | {percentage}% |")
+                safe_name = escape_markdown_text(str(name))
+                score = cvss if cvss is not None else "N/A"
+                commentary_output.append(f"| {safe_name} | {score} | {count:,} | {percentage}% |")
 
             commentary_output.append("")
 
@@ -304,56 +314,52 @@ def generate_markdown(
     
             for name, cvss, count, percentage in (statistics["top_patch_findings"]):
     
-                commentary_output.append(f"| {name} | {cvss} | {count:,} | {percentage}% |")
+                safe_name = escape_markdown_text(str(name))
+                score = cvss if cvss is not None else "N/A"
+                commentary_output.append(f"| {safe_name} | {score} | {count:,} | {percentage}% |")
     
             commentary_output.append("")
 
         references.update(finding.references)
+        commentary_sections.append((finding, "\n".join(commentary_output).strip()))
 
     #---------------------------------------------------------------------------
     # Remediation Section
     #---------------------------------------------------------------------------
-    remediation_output.append("# Remediation")
-    remediation_output.append("")
-
-    if remediation_introduction:
-        remediation_output.append(_reflow_markdown(remediation_introduction))
-        remediation_output.append("")
-
     for finding in findings:
 
         if not finding.solution:
             continue
 
-        remediation_output.append(f"### {finding.title}")
-        remediation_output.append("")
+        remediation_sections.append((
+            finding,
+            f"### {finding.title}\n\n{_reflow_markdown(finding.solution)}",
+        ))
 
-        remediation_output.append(_reflow_markdown(finding.solution))
-        remediation_output.append("")
-
-    #---------------------------------------------------------------------------
-    # Print Commentary
-    #---------------------------------------------------------------------------
-    output.extend(commentary_output)
-    output.append("")
-
-    #---------------------------------------------------------------------------
-    # Print Remediation
-    #---------------------------------------------------------------------------
-    output.extend(remediation_output)
-    output.append("")
-
-    #---------------------------------------------------------------------------
-    # References Section
-    #---------------------------------------------------------------------------
+    reference_output: list[str] = []
     if references:
-        output.append("")
-        output.append("# References")
-        output.append("")
-
         for reference in sorted(references):
+            reference_output.append(f"- [{reference}]({reference})")
 
-            output.append(f"- [{reference}]({reference})")
+    return ReportSections(
+        title=title,
+        overview="\n".join(overview).strip(),
+        commentary=commentary_sections,
+        remediation_introduction=_reflow_markdown(remediation_introduction),
+        remediation=remediation_sections,
+        references="\n".join(reference_output),
+    )
 
-    with open(output_path, "w", encoding="utf-8",) as fp:
-        fp.write("\n".join(output))
+
+def format_markdown(sections: ReportSections) -> str:
+    output = [f"# {sections.title}"]
+    if sections.overview:
+        output.append(sections.overview)
+    output.extend(text for _, text in sections.commentary)
+    output.append("# Remediation")
+    if sections.remediation_introduction:
+        output.append(sections.remediation_introduction)
+    output.extend(text for _, text in sections.remediation)
+    if sections.references:
+        output.extend(["# References", sections.references])
+    return "\n\n".join(output) + "\n"

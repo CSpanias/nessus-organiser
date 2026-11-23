@@ -1,8 +1,10 @@
-import tempfile
 import unittest
-from pathlib import Path
 
-from nessus_organiser.reporting.markdown import generate_markdown, _reflow_markdown
+from nessus_organiser.reporting.markdown import (
+    _reflow_markdown,
+    build_report_sections,
+    format_markdown,
+)
 
 
 class MarkdownReportTests(unittest.TestCase):
@@ -15,16 +17,11 @@ class MarkdownReportTests(unittest.TestCase):
             },
         }
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output_path = Path(temp_dir) / "report.md"
-            generate_markdown(
-                findings=[],
-                output_path=output_path,
-                title="Patch Management Review",
-                statistics=statistics,
-            )
-
-            report = output_path.read_text(encoding="utf-8")
+        report = format_markdown(build_report_sections(
+            findings=[],
+            title="Patch Management Review",
+            statistics=statistics,
+        ))
 
         self.assertIn(
             "Counts are deduplicated by host and Nessus plugin ID.",

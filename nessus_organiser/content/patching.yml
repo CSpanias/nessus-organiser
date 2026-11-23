@@ -58,6 +58,10 @@ unsupported_software:
     - Ensure replacement software receives ongoing security updates and
       vendor support.
 
+  references:
+    - https://csrc.nist.gov/pubs/sp/800/40/r4/final
+    - https://www.ncsc.gov.uk/collection/vulnerability-management
+
 missing_security_patches:
 
   id: SW-002
@@ -100,3 +104,8 @@ missing_security_patches:
     - Regularly review software inventories to identify systems missing
       security updates.
     - Monitor vendor security advisories for newly released updates.
+
+  references:
+    - https://csrc.nist.gov/pubs/sp/800/40/r4/final
+    - https://www.cisa.gov/news-events/news/understanding-patches-and-software-updates
+    - https://www.ncsc.gov.uk/collection/vulnerability-management

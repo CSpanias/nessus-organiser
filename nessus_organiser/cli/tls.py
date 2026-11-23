@@ -17,7 +17,7 @@ from nessus_organiser.content.loader import load_tls_content
 from nessus_organiser.findings.factory import build_findings
 from nessus_organiser.organising.tls import organise_tls, build_evidence
 from nessus_organiser.parsing.nessus import load_nessus
-from nessus_organiser.reporting.markdown import generate_markdown
+from nessus_organiser.reporting import generate_report
 
 
 def run(
@@ -33,7 +33,7 @@ def run(
             Path to the Nessus (.nessus) file.
 
         output_file:
-            Path to the generated Markdown report.
+            Path to the generated HTML report.
 
         scope:
             Assessment scope (internal or external).
@@ -80,7 +80,7 @@ def run(
         for category_findings in grouped_findings.values()
     )
 
-    generate_markdown(
+    generated = generate_report(
         findings=report_findings,
         output_path=output_file,
         title=tls_content["title"],
@@ -97,6 +97,6 @@ def run(
             ("TLS Vulnerabilities", f"{tls_vulnerability_count:,}"),
             ("Identified Categories", str(identified_categories)),
             ("Generated Findings", str(len(report_findings))),
-            ("Output File", output_file.name),
+            ("Output File", str(output_file) if generated else "Not generated"),
         ],
     )

@@ -11,6 +11,7 @@ single command execution.
 from pathlib import Path
 
 from nessus_organiser.cli import patching
+from nessus_organiser.cli import closure
 from nessus_organiser.cli import ssh
 from nessus_organiser.cli import tls
 
@@ -19,6 +20,7 @@ def run(
     nessus_file: Path,
     scope: str,
     ithc: bool = False,
+    csacyber: bool = False,
 ) -> None:
     """
     Generate all supported reports.
@@ -37,19 +39,26 @@ def run(
 
     tls.run(
         nessus_file=nessus_file,
-        output_file=Path("tls-review.md"),
+        output_file=Path("tls-review.html"),
         scope=scope,
     )
 
     patching.run(
         nessus_file=nessus_file,
-        output_file=Path("patch-management-review.md"),
+        output_file=Path("patch-management-review.html"),
         scope=scope,
         ithc=ithc,
     )
 
     ssh.run(
         nessus_file=nessus_file,
-        output_file=Path("ssh-review.md"),
+        output_file=Path("ssh-review.html"),
         scope=scope,
+    )
+
+    closure.run(
+        nessus_file=nessus_file,
+        output_file=Path("closure-review.html"),
+        scope=scope,
+        csacyber=csacyber,
     )

@@ -13,6 +13,7 @@ Currently supported report types include:
 - TLS Reviews
 - Patch Management Reviews
 - SSH Reviews
+- Internal finding closure reviews
 
 ## Installation
 
@@ -39,7 +40,7 @@ uv tool upgrade nessus-organiser
 - Deduplicate findings where appropriate
 - Generate reporting statistics automatically
 - Generate technical commentary and remediation guidance
-- Produce consultant-ready Markdown reports
+- Produce consultant-ready HTML reports with copyable Markdown
 
 ### TLS Reviews
 
@@ -57,9 +58,18 @@ uv tool upgrade nessus-organiser
 - Identify SSH cryptographic hardening weaknesses
 - Consolidate related findings into root-cause observations
 
+### Finding Closure Reviews
+
+- Suggest internal-scope closure justifications for selected Nessus plugin IDs
+- Keep closure decisions subject to manual risk and policy review
+- Currently recognise plugins 10114 (ICMP Timestamp Request Remote Date
+  Disclosure), 10884 (NTP Server Detection), and 35371 (DNS hostname.bind
+  hostname disclosure) for internal assessments only
+
 ### Reporting
 
-- Generate Markdown reports automatically
+- Generate self-contained, searchable HTML reports that work offline
+- Copy report sections or the complete report as Markdown
 - Deduplicate references
 - Produce reusable reporting outputs
 - Generate multiple report types from a single Nessus scan
@@ -141,16 +151,19 @@ The following IDs are excluded from reporting:
 
 ```bash
 # Generate a TLS Review
-nessus-organiser tls internal.nessus
+nessus-organiser tls -S internal internal.nessus
 
 # Generate a Patch Management Report
-nessus-organiser patching internal.nessus
+nessus-organiser patching -S internal internal.nessus
 
 # Generate an SSH Report
-nessus-organiser ssh internal.nessus
+nessus-organiser ssh -S internal internal.nessus
 
-# Generate All Support Reports
-nessus-organiser all internal.nessus
+# Generate all reports, including closure review when applicable
+nessus-organiser all -S internal internal.nessus
+
+# Generate only a closure review
+nessus-organiser closure -S internal internal.nessus
 
 # List supported plugin IDs for every module
 nessus-organiser --list-plugin-ids
@@ -159,50 +172,24 @@ nessus-organiser --list-plugin-ids
 nessus-organiser ssh --list-plugin-ids
 nessus-organiser tls --list-plugin-ids
 nessus-organiser patching --list-plugin-ids
+nessus-organiser closure --list-plugin-ids
 ```
 
-## Example Output
+`-S` / `--scope` is required for every scan command and must be either
+`internal` or `external`. The closure report contains suggestions for
+manual review, not automatic changes to findings. Plugins 10114, 10884 and
+35371 have internal justifications only; no external closure suggestions are
+generated for them. A closure report is created only when a rule applies to the
+selected scope and at least one matching plugin is found.
 
-```bash
-$ nessus-organiser all internal.nessus
+By default, `all` writes `tls-review.html`, `patch-management-review.html`,
+`ssh-review.html`, and `closure-review.html` in the current directory when
+their respective findings are present. Individual commands accept an HTML
+output path via `-o`.
 
-          TLS Analysis Summary
-╭───────────────────────┬───────────────╮
-│ Metric                │         Value │
-├───────────────────────┼───────────────┤
-│ Parsed Plugins        │         2,644 │
-│ Excluded Plugins      │             0 │
-│ Processed Plugins     │         2,644 │
-│ TLS Vulnerabilities   │           115 │
-│ Identified Categories │             4 │
-│ Generated Findings    │             4 │
-│ Output File           │ tls-review.md │
-╰───────────────────────┴───────────────╯
-
-           Patch Management Analysis Summary
-╭────────────────────────┬────────────────────────────╮
-│ Metric                 │                      Value │
-├────────────────────────┼────────────────────────────┤
-│ Parsed Plugins         │                      2,644 │
-│ Excluded Plugins       │                         11 │
-│ Processed Plugins      │                      2,633 │
-│ Patch Vulnerabilities  │                         43 │
-│ Legacy Vulnerabilities │                          4 │
-│ Identified Categories  │                          2 │
-│ Generated Findings     │                          2 │
-│ Output File            │ patch-management-review.md │
-╰────────────────────────┴────────────────────────────╯
-
-          SSH Analysis Summary
-╭───────────────────────┬───────────────╮
-│ Metric                │         Value │
-├───────────────────────┼───────────────┤
-│ Parsed Plugins        │         2,644 │
-│ Excluded Plugins      │             0 │
-│ Processed Plugins     │         2,644 │
-│ SSH Vulnerabilities   │             9 │
-│ Identified Categories │             4 │
-│ Generated Findings    │             4 │
-│ Output File           │ ssh-review.md │
-╰───────────────────────┴───────────────╯
-```
+Runs overwrite reports with the same names. If a report is not generated
+because there are no applicable findings, an existing report is left untouched
+and a warning is displayed. Use separate directories or output paths for
+different scans.
+Each command accepts one complete `.nessus` XML export; concatenating files
+does not produce valid XML.

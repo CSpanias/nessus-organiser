@@ -11,6 +11,8 @@ authors = [
 
 dependencies = [
     "rich>=13.0.0",
+    "rich-argparse>=1.4.0",
+    "markdown-it-py>=3.0.0",
     "PyYAML>=6.0",
 ]
 

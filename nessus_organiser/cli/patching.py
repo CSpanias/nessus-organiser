@@ -14,7 +14,6 @@ from nessus_organiser.common.counting import (
     count_legacy_instances,
     count_categories,
     count_analysed_plugins,
-    count_findings,
     count_unique_host_plugin_findings,
 )
 from nessus_organiser.common.tables import print_summary_table
@@ -22,7 +21,7 @@ from nessus_organiser.content.loader import load_patch_management_content
 from nessus_organiser.findings.factory import build_findings
 from nessus_organiser.organising.patching import organise_patch_management
 from nessus_organiser.parsing.nessus import load_nessus
-from nessus_organiser.reporting.markdown import generate_markdown
+from nessus_organiser.reporting import generate_report
 
 def run(
     nessus_file: Path,
@@ -38,7 +37,7 @@ def run(
             Path to the Nessus (.nessus) file.
 
         output_file:
-            Path to the generated Markdown report.
+            Path to the generated HTML report.
 
         scope:
             Assessment scope (internal or external).
@@ -104,7 +103,7 @@ def run(
     report_findings.sort(key=lambda f: ORDER.index(f.category))
 
     # Generate report
-    generate_markdown(
+    generated = generate_report(
             findings=report_findings,
             statistics=statistics,
             output_path=output_file,
@@ -126,6 +125,6 @@ def run(
             ("Legacy Vulnerabilities", f"{legacy_vulnerability_count:,}"),
             ("Identified Categories", str(identified_categories)),
             ("Generated Findings", str(len(report_findings))),
-            ("Output File", output_file.name),
+            ("Output File", str(output_file) if generated else "Not generated"),
         ],
     )

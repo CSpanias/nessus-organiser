@@ -6,7 +6,7 @@ List the Nessus plugin IDs recognised by each report module.
 
 from nessus_organiser.common.exclusions import GLOBAL_EXCLUDED_PLUGIN_IDS
 from nessus_organiser.common.tables import print_table
-from nessus_organiser.content.loader import load_ssh_content, load_tls_content
+from nessus_organiser.content.loader import load_closure_content, load_ssh_content, load_tls_content
 from nessus_organiser.rules.patching import (
     PATCH_MANAGEMENT_RULES,
     PATCHING_EXCLUDED_PLUGIN_IDS,
@@ -77,11 +77,17 @@ def run(module: str | None = None) -> None:
         _print_global_exclusions()
         return
 
+    if module == "closure":
+        _print_closure()
+        return
+
     _print_ssh()
     print()
     _print_tls()
     print()
     _print_patching()
+    print()
+    _print_closure()
     print()
     _print_global_exclusions()
 
@@ -104,6 +110,21 @@ def _print_ssh() -> None:
     print_table(
         title="SSH Plugin IDs",
         columns=["Plugin ID", "Finding"],
+        rows=rows,
+    )
+
+
+def _print_closure() -> None:
+    definitions = load_closure_content()["plugins"]
+    rows = [
+        (plugin_id, definition["title"], ", ".join(
+            scope for scope in ("internal", "external") if scope in definition
+        ))
+        for plugin_id, definition in definitions.items()
+    ]
+    print_table(
+        title="Closure Review Plugin IDs",
+        columns=["Plugin ID", "Finding", "Scope"],
         rows=rows,
     )
 

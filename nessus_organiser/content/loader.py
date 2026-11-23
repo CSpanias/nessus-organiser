@@ -81,3 +81,8 @@ def load_ssh_content() -> dict:
     """
 
     return _load_content("ssh.yml")
+
+
+def load_closure_content() -> dict:
+    """Load scope-specific closure review definitions."""
+    return _load_content("closure.yml")

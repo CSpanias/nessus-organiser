@@ -1,0 +1,87 @@
+title: Finding Closure Review
+
+introduction: |
+  The following findings are candidates for closure in the stated scope.
+  These are suggested justifications, not automatic decisions. Review the
+  affected systems, their exposure and applicable requirements before
+  accepting the risk or closing a finding.
+
+plugins:
+  "10884":
+    title: Network Time Protocol (NTP) Server Detection
+    platform_id: SC-2101
+    internal:
+      commentary: |
+        An NTP service was detected on the internal network. Given the
+        internal assessment context, the presence of the service alone
+        generally offers limited additional attack value and does not
+        necessarily provide a meaningful path to further compromise.
+
+        Detection alone does not establish whether an NTP service is securely
+        configured. Before closure, review its exposure and check for
+        information disclosure, amplification functionality and vulnerable
+        versions, as well as applicable security requirements. This
+        justification is intended for internal assessments only and must
+        not be applied to external findings without a separate assessment.
+
+      solution: |
+        Consider closing this finding as an accepted low risk after reviewing
+        the service configuration, exposure and organisational requirements.
+        Address any separately identified vulnerabilities or unnecessary
+        exposure.
+
+      references:
+        - https://www.tenable.com/plugins/nessus/10884
+
+  "10114":
+    title: ICMP Timestamp Request Remote Date Disclosure
+    internal:
+      commentary: |
+        ICMP timestamp responses disclose the system time. In a typical
+        internal network, this information alone offers limited additional
+        attack advantage and may be considered a low risk. On that basis,
+        closure may be appropriate where the affected systems and their
+        exposure have been reviewed.
+
+        Time information can assist attacks against time-based authentication
+        in some circumstances. Confirm that this is not a material concern
+        and that internal security policies do not require ICMP timestamp
+        requests and replies to be filtered. This justification is intended
+        for internal assessments only and must not be applied to external
+        findings without a separate assessment.
+
+      solution: |
+        Consider closing this finding as an accepted low risk after reviewing
+        the affected systems, time-based authentication dependencies and
+        organisational requirements. If the risk is not accepted, filter
+        ICMP timestamp requests (type 13) and replies (type 14).
+
+      references:
+        - https://www.tenable.com/plugins/nessus/10114
+        - https://www.rfc-editor.org/rfc/rfc792
+
+  "35371":
+    title: DNS Server hostname.bind Map Hostname Disclosure
+    internal:
+      commentary: |
+        The DNS server disclosed its hostname in response to a hostname.bind
+        query in the CHAOS class. This disclosure does not itself provide a
+        direct path to compromise and, in the assessed internal environment,
+        its practical security impact may be considered negligible.
+
+        A hostname can nevertheless assist internal reconnaissance. Review
+        whether the disclosed name contains sensitive information, the
+        server's exposure and any applicable security requirements before
+        accepting the risk. This justification is intended for internal
+        assessments only and must not be applied to external findings without
+        a separate assessment.
+
+      solution: |
+        Consider closing this finding as an accepted low risk after reviewing
+        the disclosed hostname, network exposure and organisational
+        requirements. If the risk is not accepted, consult the DNS vendor's
+        documentation for options to restrict or disable this disclosure.
+
+      references:
+        - https://www.tenable.com/plugins/nessus/35371
+        - https://www.rfc-editor.org/rfc/rfc4892

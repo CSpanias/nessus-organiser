@@ -10,13 +10,23 @@ import sys
 from pathlib import Path
 from textwrap import dedent
 
+from rich_argparse import RawDescriptionRichHelpFormatter
+
 from nessus_organiser.cli import all_reports
+from nessus_organiser.cli.closure import run as run_closure
 from nessus_organiser.cli.patching import run as run_patching
 from nessus_organiser.cli.plugins import run as run_plugins
 from nessus_organiser.cli.ssh import run as run_ssh
 from nessus_organiser.cli.tls import run as run_tls
 
-_SUPPORTED_COMMANDS = ("all", "tls", "patching", "ssh")
+_SUPPORTED_COMMANDS = ("all", "tls", "patching", "ssh", "closure")
+
+
+def _html_path(value: str) -> Path:
+    path = Path(value)
+    if path.suffix.lower() != ".html":
+        raise argparse.ArgumentTypeError("output must end in .html")
+    return path
 
 
 def _detect_module(argv: list[str]) -> str | None:
@@ -43,15 +53,15 @@ def main() -> None:
      # Parsers configuration
     class CustomFormatter(
         argparse.ArgumentDefaultsHelpFormatter,
-        argparse.RawDescriptionHelpFormatter,
+        RawDescriptionRichHelpFormatter,
     ):
         pass
 
     parser = argparse.ArgumentParser(
         prog="nessus-organiser",
         description=(
-            "Generate TLS, Patch Management, and SSH assessment reports from "
-            "Nessus (.nessus) scan files."
+            "Generate TLS, Patch Management, SSH and closure review reports "
+            "from Nessus (.nessus) scan files."
         ),
         formatter_class=CustomFormatter,
     )
@@ -76,7 +86,7 @@ def main() -> None:
         formatter_class=CustomFormatter,
         epilog=dedent("""
         Example:
-            nessus-organiser all internal.nessus
+            nessus-organiser all -S internal internal.nessus
             nessus-organiser all -S external external.nessus
         """),
     )
@@ -91,7 +101,7 @@ def main() -> None:
         "-S",
         "--scope",
         choices=["internal", "external"],
-        default="internal",
+        required=True,
         help=("Assessment scope used when generating commentary."),
     )
 
@@ -100,6 +110,7 @@ def main() -> None:
         action="store_true",
         help="Enable ITHC-specific reporting.",
     )
+    all_parser.add_argument("--csacyber", action="store_true", help=argparse.SUPPRESS)
 
     #---------------------------------------------------------------------------
     # TLS module
@@ -113,7 +124,7 @@ def main() -> None:
         formatter_class=CustomFormatter,
         epilog=dedent("""
         Examples:
-            nessus-organiser tls internal.nessus
+            nessus-organiser tls -S internal internal.nessus
             nessus-organiser tls -S external external.nessus
         """),
     )
@@ -127,16 +138,16 @@ def main() -> None:
     tls_parser.add_argument(
         "-o",
         "--output",
-        type=Path,
-        default=Path("tls-review.md"),
-        help="Output Markdown file.",
+        type=_html_path,
+        default=Path("tls-review.html"),
+        help="Output HTML report.",
     )
 
     tls_parser.add_argument(
         "-S",
         "--scope",
         choices=["internal", "external"],
-        default="internal",
+        required=True,
         help=("Assessment scope."),
     )
 
@@ -153,7 +164,7 @@ def main() -> None:
         formatter_class=CustomFormatter,
         epilog=dedent("""
         Examples:
-            nessus-organiser patching internal.nessus
+            nessus-organiser patching -S external external.nessus
             nessus-organiser patching -S internal internal.nessus
         """),
     )
@@ -167,16 +178,16 @@ def main() -> None:
     patching_parser.add_argument(
         "-o",
         "--output",
-        type=Path,
-        default=Path("patch-management-review.md"),
-        help="Output Markdown file.",
+        type=_html_path,
+        default=Path("patch-management-review.html"),
+        help="Output HTML report.",
     )
 
     patching_parser.add_argument(
         "-S",
         "--scope",
         choices=["internal", "external"],
-        default="internal",
+        required=True,
         help="Assessment scope.",
     )
 
@@ -199,7 +210,7 @@ def main() -> None:
         formatter_class=CustomFormatter,
         epilog=dedent("""
         Examples:
-            nessus-organiser ssh internal.nessus
+            nessus-organiser ssh -S internal internal.nessus
             nessus-organiser ssh -S external external.nessus
         """),
     )
@@ -213,18 +224,35 @@ def main() -> None:
     ssh_parser.add_argument(
         "-o",
         "--output",
-        type=Path,
-        default=Path("ssh-review.md"),
-        help="Output Markdown file.",
+        type=_html_path,
+        default=Path("ssh-review.html"),
+        help="Output HTML report.",
     )
 
     ssh_parser.add_argument(
         "-S",
         "--scope",
         choices=["internal", "external"],
-        default="internal",
+        required=True,
         help="Assessment scope.",
     )
+
+    closure_parser = subparsers.add_parser(
+        "closure",
+        help="Review findings that may be candidates for closure.",
+        description="Generate scope-specific closure suggestions for recognised plugins.",
+        formatter_class=CustomFormatter,
+    )
+    closure_parser.add_argument("nessus_file", type=Path, help="Nessus scan file.")
+    closure_parser.add_argument(
+        "-S", "--scope", choices=["internal", "external"], required=True,
+        help="Assessment scope.",
+    )
+    closure_parser.add_argument(
+        "-o", "--output", type=_html_path, default=Path("closure-review.html"),
+        help="Output HTML report.",
+    )
+    closure_parser.add_argument("--csacyber", action="store_true", help=argparse.SUPPRESS)
 
     #---------------------------------------------------------------------------
     # Parser Assembly
@@ -235,6 +263,9 @@ def main() -> None:
         parser.print_help()
         return
 
+    if not args.nessus_file.is_file():
+        parser.error(f"Nessus input file not found or not a file: {args.nessus_file}")
+
     match args.command:
 
         case "all":
@@ -242,6 +273,7 @@ def main() -> None:
                 nessus_file=args.nessus_file,
                 scope=args.scope,
                 ithc=args.ithc,
+                csacyber=args.csacyber,
             )
 
         case "tls":
@@ -264,6 +296,14 @@ def main() -> None:
                 nessus_file=args.nessus_file,
                 output_file=args.output,
                 scope=args.scope,
+            )
+
+        case "closure":
+            run_closure(
+                nessus_file=args.nessus_file,
+                output_file=args.output,
+                scope=args.scope,
+                csacyber=args.csacyber,
             )
 
 
