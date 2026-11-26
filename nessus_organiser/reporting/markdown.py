@@ -117,6 +117,26 @@ def _reflow_markdown(text: str | None) -> str:
     return "\n".join(output)
 
 
+def _append_severity_table(
+    output: list[str],
+    distribution: list[tuple[str, int, float]],
+    percentage_scope: str,
+) -> None:
+    if not any(count for _, count, _ in distribution):
+        return
+
+    output.append(
+        f"| Severity | Count | Percentage of {percentage_scope} |"
+    )
+    output.append("|----------|------:|-----------------------------:|")
+
+    for severity, count, percentage in distribution:
+        if count:
+            output.append(f"| {severity} | {count:,} | {percentage}% |")
+
+    output.append("")
+
+
 def build_report_sections(
     findings: list[Finding],
     title: str,
@@ -173,21 +193,14 @@ def build_report_sections(
         if any(count for _, count, _ in severity_distribution):
             overview.append(
                 "The following table summarises the CVSSv3 severity "
-                "distribution of missing security patch vulnerabilities:"
+                "distribution across all identified vulnerabilities:"
             )
             overview.append("")
-            overview.append(
-                "| Severity | Count | Percentage of Patch Vulnerabilities |"
+            _append_severity_table(
+                overview,
+                severity_distribution,
+                "Total Vulnerabilities",
             )
-            overview.append("|----------|------:|-------------------------------------:|")
-
-            for severity, count, percentage in severity_distribution:
-                if count:
-                    overview.append(
-                        f"| {severity} | {count:,} | {percentage}% |"
-                    )
-
-            overview.append("")
 
         # Assessment Summary Table
         overview.append(
@@ -291,6 +304,20 @@ def build_report_sections(
             )
 
             commentary_output.append("")
+
+        if statistics and finding.category == "unsupported_software":
+            _append_severity_table(
+                commentary_output,
+                statistics.get("legacy_severity_distribution", []),
+                "Legacy Vulnerabilities",
+            )
+
+        if statistics and finding.category == "missing_security_patches":
+            _append_severity_table(
+                commentary_output,
+                statistics.get("patch_severity_distribution", []),
+                "Patch Vulnerabilities",
+            )
 
         #-----------------------------------------------------------------------
         # Legacy Frequency Table

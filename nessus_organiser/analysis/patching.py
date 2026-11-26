@@ -97,6 +97,33 @@ def _get_percentage(
     return round((count / total) * 100, 2)
 
 
+def _build_severity_distribution(
+    findings: list[PluginFinding],
+) -> list[tuple[str, int, float]]:
+    severity_counter = Counter()
+
+    for finding in findings:
+        score = finding.cvss3_base_score or 0.0
+
+        if score >= 9.0:
+            severity_counter["Critical"] += 1
+        elif score >= 7.0:
+            severity_counter["High"] += 1
+        elif score >= 4.0:
+            severity_counter["Medium"] += 1
+        else:
+            severity_counter["Low"] += 1
+
+    return [
+        (
+            severity,
+            severity_counter.get(severity, 0),
+            _get_percentage(severity_counter.get(severity, 0), len(findings)),
+        )
+        for severity in SEVERITY_ORDER
+    ]
+
+
 def _build_frequency_table(
     data: dict,
     total: int,
@@ -179,33 +206,13 @@ def build_patch_management_statistics(
     )
 
     #-----------------------------------------------------------------------
-    # Severity Distribution
+    # Severity Distributions
     #-----------------------------------------------------------------------
-    severity_counter = Counter()
-
-    for finding in patch_findings:
-
-        score = (finding.cvss3_base_score or 0.0)
-
-        if score >= 9.0:
-            severity_counter["Critical"] += 1
-
-        elif score >= 7.0:
-            severity_counter["High"] += 1
-
-        elif score >= 4.0:
-            severity_counter["Medium"] += 1
-
-        else:
-            severity_counter["Low"] += 1
-
-    severity_distribution = []
-
-    for severity in SEVERITY_ORDER:
-
-        count = severity_counter.get(severity, 0)
-        percentage = _get_percentage(count=count, total=patch_count)
-        severity_distribution.append((severity, count, percentage))
+    legacy_severity_distribution = _build_severity_distribution(legacy_findings)
+    patch_severity_distribution = _build_severity_distribution(patch_findings)
+    severity_distribution = _build_severity_distribution(
+        legacy_findings + patch_findings
+    )
 
     #-----------------------------------------------------------------------
     # Top Unsupported Software
@@ -260,6 +267,8 @@ def build_patch_management_statistics(
             "legacy_vulnerabilities": legacy_cvss_7_or_higher,
         },
         "severity_distribution": severity_distribution,
+        "legacy_severity_distribution": legacy_severity_distribution,
+        "patch_severity_distribution": patch_severity_distribution,
         "top_patch_findings": top_patch_findings,
         "top_legacy_findings": top_legacy_findings,
     }

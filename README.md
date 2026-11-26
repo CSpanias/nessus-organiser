@@ -199,6 +199,10 @@ manual review, not automatic changes to findings. Plugins 10114, 10884 and
 generated for them. A closure report is created only when a rule applies to the
 selected scope and at least one matching plugin is found.
 
+Patch Management reports show severity distribution for all vulnerabilities
+in the overview, with separate distributions for unsupported software and
+missing security patches in their respective finding sections.
+
 Use `--exclude IP` to omit all findings for a host IP from a scan. The option
 can be repeated and matches either the Nessus report host name or its
 `host-ip` property.

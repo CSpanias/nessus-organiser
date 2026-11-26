@@ -49,6 +49,18 @@ class HtmlReportTests(unittest.TestCase):
                 "total_vulnerabilities": 2,
             },
             "severity_distribution": [
+                ("Critical", 1, 50.0),
+                ("High", 1, 50.0),
+                ("Medium", 0, 0),
+                ("Low", 0, 0),
+            ],
+            "legacy_severity_distribution": [
+                ("Critical", 0, 0),
+                ("High", 1, 100.0),
+                ("Medium", 0, 0),
+                ("Low", 0, 0),
+            ],
+            "patch_severity_distribution": [
                 ("Critical", 1, 100.0),
                 ("High", 0, 0),
                 ("Medium", 0, 0),
@@ -74,7 +86,19 @@ class HtmlReportTests(unittest.TestCase):
         )
         self.assertRegex(
             report,
+            r"<th[^>]*>Percentage of Total Vulnerabilities</th>",
+        )
+        self.assertRegex(
+            report,
+            r"<th[^>]*>Percentage of Legacy Vulnerabilities</th>",
+        )
+        self.assertRegex(
+            report,
             r"<td[^>]*>Critical</td>\s*<td[^>]*>1</td>\s*<td[^>]*>100\.0%</td>",
+        )
+        self.assertRegex(
+            report,
+            r"<td[^>]*>High</td>\s*<td[^>]*>1</td>\s*<td[^>]*>100\.0%</td>",
         )
         self.assertIn("<strong>Note</strong>:", report)
         self.assertIn("Counts are deduplicated by host and Nessus plugin ID.", report)

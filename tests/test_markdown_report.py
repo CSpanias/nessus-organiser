@@ -1,5 +1,6 @@
 import unittest
 
+from nessus_organiser.models.finding import Finding
 from nessus_organiser.reporting.markdown import (
     _reflow_markdown,
     build_report_sections,
@@ -16,9 +17,9 @@ class MarkdownReportTests(unittest.TestCase):
                 "total_vulnerabilities": 3,
             },
             "severity_distribution": [
-                ("Critical", 0, 0),
-                ("High", 1, 50.0),
-                ("Medium", 1, 50.0),
+                ("Critical", 1, 33.33),
+                ("High", 1, 33.33),
+                ("Medium", 1, 33.33),
                 ("Low", 0, 0),
             ],
         }
@@ -30,13 +31,13 @@ class MarkdownReportTests(unittest.TestCase):
         ))
 
         severity_table = report.index(
-            "| Severity | Count | Percentage of Patch Vulnerabilities |"
+            "| Severity | Count | Percentage of Total Vulnerabilities |"
         )
         summary_table = report.index("| Metric | Value |")
         self.assertLess(severity_table, summary_table)
-        self.assertIn("| High | 1 | 50.0% |", report)
-        self.assertIn("| Medium | 1 | 50.0% |", report)
-        self.assertNotIn("| Critical |", report)
+        self.assertIn("| Critical | 1 | 33.33% |", report)
+        self.assertIn("| High | 1 | 33.33% |", report)
+        self.assertIn("| Medium | 1 | 33.33% |", report)
         self.assertNotIn("| Low |", report)
         self.assertIn("**Note**:", report)
         self.assertIn(
@@ -51,6 +52,68 @@ class MarkdownReportTests(unittest.TestCase):
             "the same plugin on different hosts is counted separately.",
             report,
         )
+
+    def test_category_sections_use_their_own_severity_distributions(self) -> None:
+        legacy = Finding(
+            id="LEG", title="Unsupported Software",
+            category="unsupported_software", severity="High",
+            instances=1, hosts=1, services=1,
+        )
+        patch = Finding(
+            id="PATCH", title="Missing Security Patches",
+            category="missing_security_patches", severity="High",
+            instances=1, hosts=1, services=1,
+        )
+        statistics = {
+            "summary": {
+                "legacy_vulnerabilities": 1,
+                "patch_vulnerabilities": 1,
+                "total_vulnerabilities": 2,
+            },
+            "severity_distribution": [
+                ("Critical", 0, 0),
+                ("High", 2, 100.0),
+                ("Medium", 0, 0),
+                ("Low", 0, 0),
+            ],
+            "legacy_severity_distribution": [
+                ("Critical", 0, 0),
+                ("High", 1, 100.0),
+                ("Medium", 0, 0),
+                ("Low", 0, 0),
+            ],
+            "patch_severity_distribution": [
+                ("Critical", 0, 0),
+                ("High", 0, 0),
+                ("Medium", 0, 0),
+                ("Low", 1, 100.0),
+            ],
+            "top_legacy_findings": [],
+            "top_patch_findings": [],
+        }
+
+        sections = build_report_sections(
+            findings=[legacy, patch],
+            title="Patch Management Review",
+            statistics=statistics,
+        )
+        by_category = {
+            finding.category: commentary
+            for finding, commentary in sections.commentary
+        }
+
+        self.assertIn(
+            "| Severity | Count | Percentage of Legacy Vulnerabilities |",
+            by_category["unsupported_software"],
+        )
+        self.assertIn("| High | 1 | 100.0% |", by_category["unsupported_software"])
+        self.assertNotIn("| Low |", by_category["unsupported_software"])
+        self.assertIn(
+            "| Severity | Count | Percentage of Patch Vulnerabilities |",
+            by_category["missing_security_patches"],
+        )
+        self.assertIn("| Low | 1 | 100.0% |", by_category["missing_security_patches"])
+        self.assertNotIn("| High |", by_category["missing_security_patches"])
 
 
 class ReflowMarkdownTests(unittest.TestCase):
