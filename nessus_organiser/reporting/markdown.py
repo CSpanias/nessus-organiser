@@ -169,6 +169,26 @@ def build_report_sections(
     #---------------------------------------------------------------------------
     if statistics:
 
+        severity_distribution = statistics.get("severity_distribution", [])
+        if any(count for _, count, _ in severity_distribution):
+            overview.append(
+                "The following table summarises the CVSSv3 severity "
+                "distribution of missing security patch vulnerabilities:"
+            )
+            overview.append("")
+            overview.append(
+                "| Severity | Count | Percentage of Patch Vulnerabilities |"
+            )
+            overview.append("|----------|------:|-------------------------------------:|")
+
+            for severity, count, percentage in severity_distribution:
+                if count:
+                    overview.append(
+                        f"| {severity} | {count:,} | {percentage}% |"
+                    )
+
+            overview.append("")
+
         # Assessment Summary Table
         overview.append(
             "The below table provides a summary of the identified "
@@ -197,7 +217,7 @@ def build_report_sections(
 
         overview.append("")
         overview.append(
-            "Counts are deduplicated by host and Nessus plugin ID. A finding "
+            "**Note**: Counts are deduplicated by host and Nessus plugin ID. A finding "
             "detected on multiple ports of the same host is counted once; "
             "the same plugin on different hosts is counted separately."
         )

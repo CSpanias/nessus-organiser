@@ -15,6 +15,12 @@ class MarkdownReportTests(unittest.TestCase):
                 "patch_vulnerabilities": 2,
                 "total_vulnerabilities": 3,
             },
+            "severity_distribution": [
+                ("Critical", 0, 0),
+                ("High", 1, 50.0),
+                ("Medium", 1, 50.0),
+                ("Low", 0, 0),
+            ],
         }
 
         report = format_markdown(build_report_sections(
@@ -23,6 +29,16 @@ class MarkdownReportTests(unittest.TestCase):
             statistics=statistics,
         ))
 
+        severity_table = report.index(
+            "| Severity | Count | Percentage of Patch Vulnerabilities |"
+        )
+        summary_table = report.index("| Metric | Value |")
+        self.assertLess(severity_table, summary_table)
+        self.assertIn("| High | 1 | 50.0% |", report)
+        self.assertIn("| Medium | 1 | 50.0% |", report)
+        self.assertNotIn("| Critical |", report)
+        self.assertNotIn("| Low |", report)
+        self.assertIn("**Note**:", report)
         self.assertIn(
             "Counts are deduplicated by host and Nessus plugin ID.",
             report,

@@ -171,7 +171,8 @@ class CliReportTests(unittest.TestCase):
                     f'role="tabpanel" id="report-{index}-panel" '
                     f'aria-labelledby="report-{index}-tab">', combined
                 )
-                self.assertIn(f'id="report-{index}-search" class="search"', combined)
+            self.assertNotIn("Search findings", combined)
+            self.assertNotIn('type="search"', combined)
             self.assertIn(output.name, result.stdout)
             panels = re.split(r'(?=<section class="report-content" role="tabpanel")', combined)
             self.assertEqual(len(panels), 5)

@@ -48,6 +48,12 @@ class HtmlReportTests(unittest.TestCase):
                 "legacy_vulnerabilities": 1, "patch_vulnerabilities": 1,
                 "total_vulnerabilities": 2,
             },
+            "severity_distribution": [
+                ("Critical", 1, 100.0),
+                ("High", 0, 0),
+                ("Medium", 0, 0),
+                ("Low", 0, 0),
+            ],
             "high_risk": {"legacy_vulnerabilities": 1, "patch_vulnerabilities": 1},
             "top_legacy_findings": [("<script>alert(1)</script> | test", 7.0, 1, 100)],
             "top_patch_findings": [("Update", 9.0, 1, 100)],
@@ -62,6 +68,15 @@ class HtmlReportTests(unittest.TestCase):
 
         self.assertIn("Upgrade, replace, or migrate affected software", report)
         self.assertIn("Apply the vendor-recommended security updates", report)
+        self.assertRegex(
+            report,
+            r"<th[^>]*>Percentage of Patch Vulnerabilities</th>",
+        )
+        self.assertRegex(
+            report,
+            r"<td[^>]*>Critical</td>\s*<td[^>]*>1</td>\s*<td[^>]*>100\.0%</td>",
+        )
+        self.assertIn("<strong>Note</strong>:", report)
         self.assertIn("Counts are deduplicated by host and Nessus plugin ID.", report)
         self.assertIn("CVSSv3 base score of 7.0 or greater", report)
         self.assertIn("https://csrc.nist.gov/pubs/sp/800/40/r4/final", report)
@@ -69,7 +84,8 @@ class HtmlReportTests(unittest.TestCase):
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt; | test", report)
         self.assertNotIn("<script>alert(1)</script>", report)
         self.assertIn("Copy Markdown", report)
-        self.assertIn('id="search"', report)
+        self.assertNotIn("Search findings", report)
+        self.assertNotIn('type="search"', report)
 
     def test_grouped_reports_have_matching_sections_and_copy_content(self) -> None:
         content = load_tls_content()
@@ -228,6 +244,7 @@ class HtmlReportTests(unittest.TestCase):
         )
         self.assertNotIn("Nessus plugin 10884 was identified", copied)
         self.assertNotIn("References", copied)
+        self.assertNotIn("<h2>Report Overview</h2>", report)
         self.assertIn("<h4>References</h4>", report)
         self.assertIn('href="https://www.tenable.com/plugins/nessus/10884"', report)
 
