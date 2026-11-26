@@ -123,6 +123,38 @@ class CliReportTests(unittest.TestCase):
             self.assertEqual(load_nessus(scan, on_progress=lambda done, total: updates.append((done, total))), [])
             self.assertEqual(updates, [(0, 2), (1, 2), (2, 2)])
 
+    def test_parser_excludes_hosts_by_report_host_name_or_host_ip(self) -> None:
+        xml = (
+            '<NessusClientData_v2><Report>'
+            '<ReportHost name="scanner-vm">'
+            '<HostProperties><tag name="host-ip">192.0.2.10</tag></HostProperties>'
+            '<ReportItem pluginID="1" pluginName="Excluded by property" '
+            'severity="1" port="0" protocol="tcp"/>'
+            '</ReportHost>'
+            '<ReportHost name="192.0.2.20">'
+            '<ReportItem pluginID="2" pluginName="Excluded by name" '
+            'severity="1" port="0" protocol="tcp"/>'
+            '</ReportHost>'
+            '<ReportHost name="192.0.2.30">'
+            '<ReportItem pluginID="3" pluginName="Included" '
+            'severity="1" port="0" protocol="tcp"/>'
+            '</ReportHost>'
+            '</Report></NessusClientData_v2>'
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            scan = Path(directory) / "scan.nessus"
+            scan.write_text(xml, encoding="utf-8")
+
+            findings = load_nessus(
+                scan,
+                exclude_ips={"192.0.2.10", "192.0.2.20"},
+            )
+
+        self.assertEqual(
+            [(finding.plugin_id, finding.host) for finding in findings],
+            [("3", "192.0.2.30")],
+        )
+
     def test_all_loads_scan_once_and_shares_findings(self) -> None:
         findings = []
         with patch.object(all_reports, "load_scan", return_value=findings) as load, \
@@ -131,7 +163,7 @@ class CliReportTests(unittest.TestCase):
              patch.object(all_reports.ssh, "analyse", return_value=None) as ssh, \
              patch.object(all_reports.closure, "analyse", return_value=None) as closure:
             all_reports.run(Path("scan.nessus"), "internal")
-        load.assert_called_once_with(Path("scan.nessus"))
+        load.assert_called_once_with(Path("scan.nessus"), exclude_ips=None)
         for command in (tls, patching, ssh, closure):
             self.assertIs(command.call_args.args[0], findings)
 
@@ -334,6 +366,51 @@ class CliReportTests(unittest.TestCase):
             self.assertNotEqual(missing.returncode, 0)
             self.assertIn("Nessus input file not found", missing.stderr)
             self.assertNotIn("Traceback", missing.stderr)
+
+    def test_scan_commands_accept_repeatable_exclude_ip_option(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            for command in ("all", "tls", "patching", "ssh", "closure"):
+                with self.subTest(command=command):
+                    result = self.run_cli(directory, command, "--help")
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("--exclude IP", result.stdout)
+                    self.assertIn(
+                        "repeat for additional hosts",
+                        " ".join(result.stdout.split()),
+                    )
+
+            invalid_ip = self.run_cli(
+                directory, "all", "-S", "internal", "--exclude", "not-an-ip", "scan.nessus"
+            )
+            self.assertNotEqual(invalid_ip.returncode, 0)
+            self.assertIn("invalid IP address", invalid_ip.stderr)
+
+    def test_all_excludes_report_host_by_ip(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            scan = base / "scan.nessus"
+            scan.write_text(
+                scan_xml().replace(
+                    '<ReportHost name="host-a">',
+                    '<ReportHost name="host-a"><HostProperties>'
+                    '<tag name="host-ip">192.0.2.10</tag></HostProperties>',
+                ),
+                encoding="utf-8",
+            )
+
+            result = self.run_cli(
+                directory,
+                "all", "-S", "internal",
+                "--exclude", "192.0.2.10",
+                "--exclude", "192.0.2.10",
+                "scan.nessus",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                list((base / "nessus-organiser").glob("*.html")),
+                [],
+            )
 
     def test_all_skips_ssh_when_only_tls_and_patching_match(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

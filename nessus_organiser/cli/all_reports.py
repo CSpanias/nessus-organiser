@@ -26,6 +26,7 @@ def run(
     scope: str,
     ithc: bool = False,
     csacyber: bool = False,
+    exclude_ips: list[str] | None = None,
 ) -> None:
     """
     Generate all supported reports.
@@ -38,12 +39,15 @@ def run(
             Assessment scope. Expected values are
             'internal' or 'external'.
 
+        exclude_ips:
+            Host IP addresses to exclude from every generated report.
+
     Returns:
         None.
     """
 
     timestamp = datetime.now()
-    plugin_findings = load_scan(nessus_file)
+    plugin_findings = load_scan(nessus_file, exclude_ips=exclude_ips)
     reports: list[AnalysisReport] = []
     with report_progress(transient=False, spinner=False) as progress:
         task = progress.add_task("Analysing TLS findings...", total=4)

@@ -9,8 +9,9 @@ structures. Downstream modules should consume PluginFinding objects and avoid
 parsing XML directly.
 """
 
+from collections.abc import Callable, Collection
+from ipaddress import ip_address
 from pathlib import Path
-from collections.abc import Callable
 import xml.etree.ElementTree as ET
 
 from nessus_organiser.models.plugin import PluginFinding
@@ -31,6 +32,7 @@ SEVERITY_MAP = {
 def load_nessus(
     path: Path,
     on_progress: Callable[[int, int], None] | None = None,
+    exclude_ips: Collection[str] | None = None,
 ) -> list[PluginFinding]:
     """
     Parse a Nessus XML file.
@@ -38,6 +40,9 @@ def load_nessus(
     Args:
         path:
             Path to the Nessus (.nessus) file.
+
+        exclude_ips:
+            IP addresses whose hosts should be omitted from the parsed findings.
 
     Returns:
         A list of PluginFinding objects extracted from
@@ -52,6 +57,7 @@ def load_nessus(
     """
 
     findings: list[PluginFinding] = []
+    excluded_ips = {str(ip_address(value)) for value in (exclude_ips or ())}
 
     tree = ET.parse(path)
     root = tree.getroot()
@@ -63,16 +69,40 @@ def load_nessus(
 
         host = report_host.attrib.get("name", "")
 
-        findings.extend(
-            parse_report_host(
-                report_host=report_host,
-                host=host,
+        if not _is_excluded_host(report_host, host, excluded_ips):
+            findings.extend(
+                parse_report_host(
+                    report_host=report_host,
+                    host=host,
+                )
             )
-        )
         if on_progress:
             on_progress(index, len(report_hosts))
 
     return findings
+
+
+def _is_excluded_host(
+    report_host: ET.Element,
+    host: str,
+    excluded_ips: set[str],
+) -> bool:
+    if not excluded_ips:
+        return False
+
+    host_ips = [host]
+    host_ips.extend(
+        tag.text.strip()
+        for tag in report_host.findall("./HostProperties/tag")
+        if tag.attrib.get("name") == "host-ip" and tag.text
+    )
+    for value in host_ips:
+        try:
+            if str(ip_address(value.strip())) in excluded_ips:
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def parse_report_host(report_host: ET.Element, host: str) -> list[PluginFinding]:

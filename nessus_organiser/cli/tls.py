@@ -28,6 +28,7 @@ def run(
     scope: str,
     plugin_findings: list[PluginFinding] | None = None,
     console: Console | None = None,
+    exclude_ips: list[str] | None = None,
 ) -> None:
     """
     Generate a TLS report from a Nessus scan.
@@ -42,12 +43,15 @@ def run(
         scope:
             Assessment scope (internal or external).
 
+        exclude_ips:
+            Host IP addresses to exclude from the report.
+
     Returns:
         None.
     """
 
     if plugin_findings is None:
-        plugin_findings = load_scan(nessus_file)
+        plugin_findings = load_scan(nessus_file, exclude_ips=exclude_ips)
     report = analyse(plugin_findings, scope)
     if report is None:
         return

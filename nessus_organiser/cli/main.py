@@ -5,6 +5,7 @@ Application entry point.
 """
 
 import argparse
+import ipaddress
 import sys
 
 from pathlib import Path
@@ -21,6 +22,23 @@ from nessus_organiser.cli.tls import run as run_tls
 from nessus_organiser.reporting import report_path
 
 _SUPPORTED_COMMANDS = ("all", "tls", "patching", "ssh", "closure")
+
+
+def _parse_ip_address(value: str) -> str:
+    try:
+        return str(ipaddress.ip_address(value))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"invalid IP address: {value}") from error
+
+
+def _add_exclude_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        type=_parse_ip_address,
+        metavar="IP",
+        help="Exclude findings from this host IP; repeat for additional hosts.",
+    )
 
 
 def _detect_module(argv: list[str]) -> str | None:
@@ -105,6 +123,7 @@ def main() -> None:
         help="Enable ITHC-specific reporting.",
     )
     all_parser.add_argument("--csacyber", action="store_true", help=argparse.SUPPRESS)
+    _add_exclude_argument(all_parser)
 
     #---------------------------------------------------------------------------
     # TLS module
@@ -136,6 +155,7 @@ def main() -> None:
         required=True,
         help=("Assessment scope."),
     )
+    _add_exclude_argument(tls_parser)
 
     #---------------------------------------------------------------------------
     # Patching module
@@ -174,6 +194,7 @@ def main() -> None:
         action="store_true",
         help="Enable ITHC-specific reporting.",
     )
+    _add_exclude_argument(patching_parser)
 
     #---------------------------------------------------------------------------
     # SSH module
@@ -206,6 +227,7 @@ def main() -> None:
         required=True,
         help="Assessment scope.",
     )
+    _add_exclude_argument(ssh_parser)
 
     closure_parser = subparsers.add_parser(
         "closure",
@@ -219,6 +241,7 @@ def main() -> None:
         help="Assessment scope.",
     )
     closure_parser.add_argument("--csacyber", action="store_true", help=argparse.SUPPRESS)
+    _add_exclude_argument(closure_parser)
 
     #---------------------------------------------------------------------------
     # Parser Assembly
@@ -240,6 +263,7 @@ def main() -> None:
                 scope=args.scope,
                 ithc=args.ithc,
                 csacyber=args.csacyber,
+                exclude_ips=args.exclude,
             )
 
         case "tls":
@@ -247,6 +271,7 @@ def main() -> None:
                 nessus_file=args.nessus_file,
                 output_file=report_path("tls-review"),
                 scope=args.scope,
+                exclude_ips=args.exclude,
             )
 
         case "patching":
@@ -255,6 +280,7 @@ def main() -> None:
                 output_file=report_path("patch-management-review"),
                 scope=args.scope,
                 ithc=args.ithc,
+                exclude_ips=args.exclude,
             )
 
         case "ssh":
@@ -262,6 +288,7 @@ def main() -> None:
                 nessus_file=args.nessus_file,
                 output_file=report_path("ssh-review"),
                 scope=args.scope,
+                exclude_ips=args.exclude,
             )
 
         case "closure":
@@ -270,6 +297,7 @@ def main() -> None:
                 output_file=report_path("closure-review"),
                 scope=args.scope,
                 csacyber=args.csacyber,
+                exclude_ips=args.exclude,
             )
 
 

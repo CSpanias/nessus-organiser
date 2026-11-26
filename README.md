@@ -176,6 +176,9 @@ nessus-organiser ssh -S internal internal.nessus
 # Generate one combined report, including closure review when applicable
 nessus-organiser all -S internal internal.nessus
 
+# Exclude findings affecting the testing VM (repeat --exclude for more IPs)
+nessus-organiser all -S internal --exclude 192.0.2.10 internal.nessus
+
 # Generate only a closure review
 nessus-organiser closure -S internal internal.nessus
 
@@ -195,6 +198,10 @@ manual review, not automatic changes to findings. Plugins 10114, 10884 and
 35371 have internal justifications only; no external closure suggestions are
 generated for them. A closure report is created only when a rule applies to the
 selected scope and at least one matching plugin is found.
+
+Use `--exclude IP` to omit all findings for a host IP from a scan. The option
+can be repeated and matches either the Nessus report host name or its
+`host-ip` property.
 
 Reports are created in a `nessus-organiser` directory under the current
 working directory. Filenames include the local date and time, for example
